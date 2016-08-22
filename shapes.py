@@ -1,6 +1,6 @@
 import pymunk
 
-def add_block(space, positio = [0.0,0.0], mass = 1, size = 10):
+def add_block(space, position = [0.0,0.0], mass = 1, size = 10):
 
     coord = size/2
     coords = [[-coord, -coord], [coord,-coord], [coord, coord], [-coord,coord]]
