@@ -3,7 +3,7 @@ import pygame
 from pygame.locals import *
 import pymunk #1
 import random
-from shapes import add_block, add_base
+from shapes import add_block, add_base, make_pile
 
 
 
@@ -23,6 +23,8 @@ draw_options = pygame_util.DrawOptions(screen)
 base = add_base(space, (0,100),(500,100))
 
 ticks_to_next_block = 10
+s = make_pile(space, 3)
+
 while True:
     for event in pygame.event.get():
         if event.type == QUIT:
@@ -30,19 +32,20 @@ while True:
         elif event.type == KEYDOWN and event.key == K_ESCAPE:
             sys.exit(0)
 
-    ticks_to_next_block -= 1
+    # ticks_to_next_block -= 1
+    #
+    # # add a block every 25 ticks
+    # if ticks_to_next_block <= 0:
+    #
+    #     ticks_to_next_block = 25
+    #     s = add_block(space, position = [300,500], size = 50)
+    #     blocks.append(s)
 
-    # add a block every 25 ticks
-    if ticks_to_next_block <= 0:
-         
-        ticks_to_next_block = 25
-        s = add_block(space, position = [300,500], size = 50)
-        blocks.append(s)
 
     space.step(1/50.0)
 
     screen.fill((255,255,255))
-    
+
     space.debug_draw(draw_options)
     pygame.display.flip()
     clock.tick(50)
