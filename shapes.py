@@ -14,9 +14,9 @@ def add_block(space, position = [0.0,0.0], mass = 1, size = 10):
 
 def add_base(space, p1, p2):
     body = pymunk.Body(body_type = pymunk.Body.STATIC)
-    mid = [ (p1[0]+p2[0])/2, (p1[1]+p2[1])/2 ]
-    body.position = (mid[0],mid[1])
-    l = pymunk.Segment(body, p1, p2,5)
+    mid =  (p1[0]+p2[0])/2, (p1[1]+p2[1])/2
+    body.position = mid
+    l = pymunk.Segment(body, p1, p2, 10)
     space.add(l)
     return l
 
