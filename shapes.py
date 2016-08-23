@@ -25,8 +25,8 @@ def make_pile(space, num_of_blocks = 5, base_coord = [(0., 100.), (500., 100.)],
         body, shape = add_block(space, last_block_pos , mass = mass, size = size)
 
 
-        trunc_sample = truncnorm.rvs(- size / .002, size / .002, size = 1)[0] + last_block_pos[0]
-        last_block_pos = [trunc_sample , last_block_pos[1] + size / 2.]
+        trunc_sample = truncnorm.rvs(- size / 20., size / 20., size = 1)[0] * 10. + last_block_pos[0]
+        last_block_pos = [trunc_sample , last_block_pos[1] + size]
         print ":salam",last_block_pos[0] - size / 2., last_block_pos[0] + size /2. ,"khszk"
         print last_block_pos
         body_list.append(body)
