@@ -18,7 +18,7 @@ tf.app.flags.DEFINE_integer('batch_size', 128,
                             """Number of images to process in a batch.""")
 tf.app.flags.DEFINE_string('data_dir', '/tmp/blocks_data',
                            """Path to the Blocks data directory.""")
-tf.app.flags.DEFINE_boolean('use_fp16', False,
+tf.app.flags.DEFINE_boolean('use_fp16', True,
                             """Train the model using fp16.""")
 
 # Global constants describing the Blocks data set.
@@ -100,27 +100,6 @@ def _variable_with_weight_decay(name, shape, stddev, wd):
     weight_decay = tf.mul(tf.nn.l2_loss(var), wd, name='weight_loss')
     tf.add_to_collection('losses', weight_decay)
   return var
-
-
-def distorted_inputs():
-  """Construct distorted input for Blocks training using the Reader ops.
-
-  Returns:
-    images: Images. 4D tensor of [batch_size, IMAGE_SIZE, IMAGE_SIZE, 3] size.
-    labels: Labels. 1D tensor of [batch_size] size.
-
-  Raises:
-    ValueError: If no data_dir
-  """
-  if not FLAGS.data_dir:
-    raise ValueError('Please supply a data_dir')
-  data_dir = os.path.join(FLAGS.data_dir, 'blocks-batches-bin')
-  images, labels = DNN_input.distorted_inputs(data_dir=data_dir,
-                                              batch_size=FLAGS.batch_size)
-  if FLAGS.use_fp16:
-    images = tf.cast(images, tf.float16)
-    labels = tf.cast(labels, tf.float16)
-  return images, labels
 
 
 def inputs(eval_data):
@@ -237,18 +216,21 @@ def loss(logits, labels):
   Add summary for "Loss" and "Loss/avg".
   Args:
     logits: Logits from inference().
-    labels: Labels from distorted_inputs or inputs(). 1-D tensor
-            of shape [batch_size]
+    labels: Labels from distorted_inputs or inputs(). 2-D tensor
+            of shape [batch_size * NUM_GRID_LINES]
 
   Returns:
     Loss tensor of type float.
   """
   # Calculate the average cross entropy loss across the batch.
   labels = tf.cast(labels, tf.int64)
-  cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
-      logits, labels, name='cross_entropy_per_example')
-  cross_entropy_mean = tf.reduce_mean(cross_entropy, name='cross_entropy')
-  tf.add_to_collection('losses', cross_entropy_mean)
+  temp_dist = tf.sub(labels, logits)
+
+  # cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
+  #     logits, labels, name='cross_entropy_per_example')
+  SE = tf.nn.l2_loss(temp_dist)
+  MSE = tf.reduce_mean(SE, name='cross_entropy')
+  tf.add_to_collection('losses', MSE)
 
   # The total loss is defined as the cross entropy loss plus all of the weight
   # decay terms (L2 loss).

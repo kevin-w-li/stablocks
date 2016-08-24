@@ -32,7 +32,7 @@ def train():
     global_step = tf.Variable(0, trainable=False)
 
     # Get images and probability vectors for Blocks.
-    images, labels = DNN_model.distorted_inputs()
+    images, labels = DNN_model.inputs(False)
 
     # Build a Graph that computes the logits predictions from the
     # inference model.
