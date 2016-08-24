@@ -10,15 +10,14 @@ def generate_piles(trials = 10):
     space = pymunk.Space()
     space.gravity = (0.0, -900.0)
 
+    return_list = []
     # the loop making difference spaces
     for i in range(trials):
         space = pymunk.Space()
         space.gravity = (0.0, -900.0)
         base = add_base(space, (0,100),(500,100))
-        s = make_pile(space, 3)
-        print s
-        del base
-
-
+        _, s = make_pile(space, 3)
+        return_list.append(s)
+    return s
 if __name__ ==  "__main__":
-    generate_piles()
+    print generate_piles()
