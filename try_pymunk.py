@@ -23,7 +23,7 @@ draw_options = pygame_util.DrawOptions(screen)
 base = add_base(space, (0,100),(500,100))
 
 ticks_to_next_block = 10
-s = make_pile(space, 6)
+s = make_pile(space, 3)
 
 while True:
     for event in pygame.event.get():
