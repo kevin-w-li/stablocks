@@ -10,9 +10,9 @@ def combined_center_of_mass(blocks):
 
     nblocks = len(blocks)
     xcoms = [0.0]*(nblocks-1)
-    labels = [None]*(nblocks-1) 
-    plane_heights = map(lambda block: block.bb.bottom,blocks[1:])
-    plane_lengths = map(lambda block: block.bb.right-block.bb.left,blocks[1:])
+    labels = [0]*(nblocks-1) 
+    plane_heights = map(lambda block: block.bb.top,blocks[:-1])
+    plane_lengths = map(lambda block: block.bb.right-block.bb.left,blocks[:-1])
     for bi, b in enumerate(blocks[:-1]):
         xcom = sum(map(lambda block: (block.body.position[0]-b.body.position[0])*block.body.mass,
             blocks[bi+1:]))
@@ -31,10 +31,11 @@ def is_pile(blocks):
     
     return True
     
-def to_strips(dims, plane_heights, labels, n):
+def labels_to_strips(dims, plane_heights, labels, n):
     
     lims = range(dims[0], dims[1]+1, (dims[1]-dims[0])/n)
     idx = map(lambda h: bisect.bisect_left(lims, h), plane_heights)
     vec = [0]*n
     for ii, i in enumerate(idx):
         vec[i] = labels[ii]
+    return vec

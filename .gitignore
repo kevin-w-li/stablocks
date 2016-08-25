@@ -2,3 +2,5 @@
 *.sw*
 *.pyc
 *.idea
+dataset*
+data/*

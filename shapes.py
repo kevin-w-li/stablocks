@@ -1,10 +1,10 @@
 import pymunk
-from scipy.stats import truncnorm
+from scipy.stats import truncnorm, uniform
 from random import shuffle
 import numpy as np
 def add_block(space, position = [0.0,0.0], mass = 1, block_dim = [50, 50]):
-    width = block_dim[1]
-    height = block_dim[0]
+    width = block_dim[0]
+    height = block_dim[1]
 
     coords = [[- width / 2., - height / 2.], [-width /2. , height / 2.], [width / 2., height / 2.], [width / 2., - height / 2.]]
     moment = pymunk.moment_for_poly(mass, coords)
@@ -17,21 +17,26 @@ def add_block(space, position = [0.0,0.0], mass = 1, block_dim = [50, 50]):
     return body, shape
 
 
-def make_pile(space, num_of_blocks = 5, base_coord = [(0., 100.), (500., 100.)], base_width = 10,  mass = 1, block_dim = [40, 100]):
+def make_pile(space, num_of_blocks = 5, base_coord = [(0., 100.), (500., 100.)], base_width = 10,  mass = 1, block_dim = [100,40], noise=1):
+
     add_base(space, base_coord[0], base_coord[1], width=base_width)
-    first_block_pos = [(base_coord[0][0] + base_coord[1][0]) / 2., base_coord[0][1] + base_width + block_dim[0] / 2.]
+    first_block_pos = [(base_coord[0][0] + base_coord[1][0]) / 2., base_coord[0][1] + base_width + block_dim[1] / 2.]
     shape_list = []
     body_list = []
     last_block_pos = first_block_pos
+    last_top = last_block_pos[1] + block_dim[1] / 2.
     for i in range(num_of_blocks):
+        body, shape = add_block(space, last_block_pos, mass = mass, block_dim = block_dim)
+        last_block_width = block_dim[0]
         shuffle(block_dim)
-        body, shape = add_block(space, last_block_pos , mass = mass, block_dim = block_dim)
-        trunc_sample = truncnorm.rvs(- block_dim[0] / 20., block_dim[0] / 20., size = 1)[0] * 10 + last_block_pos[0]
-        last_block_pos = [trunc_sample , last_block_pos[1] + block_dim[0]]
+        x_range = last_block_width/2 + block_dim[0]/2
+        trunc_sample = truncnorm.rvs(- 1. / (noise), 1. / (noise)) * noise * x_range + last_block_pos[0]
+        last_block_pos = [trunc_sample , last_top + block_dim[1]/2.]
+        last_top = last_block_pos[1] + block_dim[1]/2.
         body_list.append(body)
         shape_list.append(shape)
     return body_list, shape_list
-
+'''
 def make_pile(space, num_of_blocks = 5, base_coord = [(0, 100), (500, 100)], mass = 1, size = 10):
     add_base(space, base_coord[0], base_coord[1])
     first_block_pos = [(base_coord[0][0] + base_coord[1][0]) / 2., base_coord[0][1]]
@@ -42,7 +47,7 @@ def make_pile(space, num_of_blocks = 5, base_coord = [(0, 100), (500, 100)], mas
         body_list.append(body)
         shape_list.append(shape)
     return body_list, shape_list
-
+'''
 def add_base(space, p1, p2, width = 5):
     body = pymunk.Body(body_type = pymunk.Body.STATIC)
     mid =  (p1[0] + p2[0])/2.0, (p1[1] + p2[1])/2.0
