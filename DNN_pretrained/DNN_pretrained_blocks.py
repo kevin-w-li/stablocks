@@ -278,8 +278,6 @@ def test_DNN_pretrained():
         text_file.write(str(valid_cost / (y_test.shape[0])))
         text_file.write('\n')
         text_file.close()
-        text_file.write('\n')
-        text_file.close()
 
 
 
