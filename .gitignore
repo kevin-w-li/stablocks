@@ -2,6 +2,6 @@
 *.sw*
 *.pyc
 *.idea
-tmp/*/*
+tmp/*
 dataset*
 data/*

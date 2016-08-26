@@ -10,7 +10,7 @@ import h5py
 IMAGE_SIZE = 227
 
 # Global constants describing the Blocks data set.
-NUM_GRID_LINES = 100
+NUM_GRID_LINES = 50
 NUM_EXAMPLES_PER_EPOCH_FOR_TRAIN = 10#50000
 NUM_EXAMPLES_PER_EPOCH_FOR_EVAL = 10#10000
 
@@ -170,12 +170,13 @@ import pickle as pk
 #     rfile.close()
 # sess = tf.Session()
 # sess.run(inputs(False, 'tmp/blocks_data/', 10, sess=sess))
-
+'''
 import h5py
 hdf_file = h5py.File('tmp/blocks_data/dataset_1000_5.hdf5', 'r')
 images = hdf_file.get('data')
 labels = hdf_file.get('label')
 print(labels.shape)
+'''
 #############################################
 
 # def read_blocks_bin(filename_queue):
