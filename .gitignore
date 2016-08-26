@@ -3,3 +3,5 @@
 *.pyc
 *.idea
 tmp/*/*
+dataset*
+data/*
