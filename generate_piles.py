@@ -1,4 +1,4 @@
-""" Code generating random piles of bloacks
+""" Code generating random piles of blocks
 """
 import sys
 import pymunk #1
@@ -19,5 +19,6 @@ def generate_piles(trials = 10):
         _, s = make_pile(space, 3)
         return_list.append(s)
     return s
+
 if __name__ ==  "__main__":
     print generate_piles()

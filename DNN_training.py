@@ -9,6 +9,7 @@ import DNN_model
 from datetime import datetime
 import os.path
 import time
+import h5py
 
 import numpy as np
 from six.moves import xrange  # pylint: disable=redefined-builtin
@@ -26,13 +27,17 @@ tf.app.flags.DEFINE_boolean('log_device_placement', False,
                             """Whether to log device placement.""")
 
 
-def train():
+def train(hdf_file):
   """Train DNN_model for a number of steps."""
+  batch_num = 0
+
   with tf.Graph().as_default():
     global_step = tf.Variable(0, trainable=False)
 
     # Get images and probability vectors for Blocks.
-    images, labels = DNN_model.inputs(False)
+    images, labels = DNN_model.inputs(False, batch_num = batch_num, hdf_file= hdf_file)
+    batch_num += 1
+    print(batch_num)
 
     # Build a Graph that computes the logits predictions from the
     # inference model.
@@ -92,11 +97,11 @@ def train():
 
 
 def main(argv=None):  # pylint: disable=unused-argument
-  DNN_model.read_BlocksData()
+  hdf_file = h5py.File('tmp/blocks_data/dataset_1000_5.hdf5', 'r')
   if tf.gfile.Exists(FLAGS.train_dir):
     tf.gfile.DeleteRecursively(FLAGS.train_dir)
   tf.gfile.MakeDirs(FLAGS.train_dir)
-  train()
+  train(hdf_file)
 
 
 if __name__ == '__main__':
