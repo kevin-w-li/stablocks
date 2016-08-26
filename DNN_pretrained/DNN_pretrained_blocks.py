@@ -35,10 +35,11 @@ tf.set_random_seed(0)
 flags = tf.app.flags
 FLAGS = flags.FLAGS
 
-flags.DEFINE_boolean('image_dim', 227, 'first dimension of the image; we are assuming a square image')
-flags.DEFINE_boolean('color_channel', 3, 'number of color channels')
-flags.DEFINE_boolean('num_gridlines', 30, 'number of grid lines')
-flags.DEFINE_boolean('exp_name', 'initial_exp', 'some informative name for the experiment')
+flags.DEFINE_integer('image_dim', 227, 'first dimension of the image; we are assuming a square image')
+flags.DEFINE_integer('color_channel', 3, 'number of color channels')
+flags.DEFINE_integer('num_gridlines', 100, 'number of grid lines')
+flags.DEFINE_integer('num_minibatches', 100, 'number of minibatches')
+flags.DEFINE_string('exp_name', 'initial_exp', 'some informative name for the experiment')
 
 ################################################################################
 
@@ -65,7 +66,7 @@ def conv(input, kernel, biases, k_h, k_w, c_o, s_h, s_w, padding="VALID", group=
 
 
 
-def Alexnet(input_shape=[None, FLAGS.dim, FLAGS.dim, FLAGS.color_channel],
+def Alexnet(input_shape=[None, FLAGS.image_dim, FLAGS.image_dim, FLAGS.color_channel],
         output_shape=[None, FLAGS.num_gridlines]):
 
     x = tf.placeholder(tf.float32, input_shape)
@@ -204,20 +205,22 @@ def Alexnet(input_shape=[None, FLAGS.dim, FLAGS.dim, FLAGS.color_channel],
 
     temp_dist = tf.sub(y, h_regression)
     SE = tf.nn.l2_loss(temp_dist)
-    MSE = tf.reduce_mean(SE, name='cross_entropy')
-    return {'cost': MSE, 'y_output': y, 'x_input': x}
+    MSE = tf.reduce_mean(SE, name='mse')
+    return {'cost': MSE, 'y_output': y, 'x_input': x, 'y': h_regression}
 
 
 
 def test_DNN_pretrained():
-    hdf_file = h5py.File('tmp/blocks_data/dataset_1000_5.hdf5', 'r')
+    hdf_file = h5py.File('../tmp/blocks_data/dataset_1000_5.hdf5', 'r')
     images = hdf_file.get('data')
     labels = hdf_file.get('label')
-    images = tf.reshape(images, )
-    x_train = images
-    y_train = labels
-    x_test = images[-10:]
-    y_test = labels[-10:]
+    num_images = images.shape[0]
+    images = np.reshape(images, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.image_dim, FLAGS.image_dim, FLAGS.color_channel))
+    labels = np.reshape(labels, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.num_gridlines))
+    x_train = images[:-2]
+    y_train = labels[:-2]
+    x_test = images[-2:]
+    y_test = labels[-2:]
 
     cnn = Alexnet()
     n_epochs = 400
@@ -225,13 +228,12 @@ def test_DNN_pretrained():
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=1e-07).minimize(cnn['cost'])
 
     try:
-        shutil.rmtree('logs/' + FLAGS.exp_name + '_summarywriter')
         shutil.rmtree('logs/' + FLAGS.exp_name)
     except:
         pass
-
     if not os.path.exists('logs/' + FLAGS.exp_name):
         os.makedirs('logs/' + FLAGS.exp_name)
+
     init = tf.initialize_all_variables()
     sess = tf.Session()
     sess.run(init)
@@ -241,12 +243,11 @@ def test_DNN_pretrained():
         for batch_i in np.random.permutation(range(y_train.shape[0])):
             tic = time.time()
             print batch_i
-            batch_y_input = y_train[batch_i, :, :]
-            batch_X_input = x_train[batch_i, :, :, :]
+            batch_y_output = y_train[batch_i, :, :]
+            batch_X_input = x_train[batch_i, :, :, :, :]
             temp = sess.run([cnn['cost'], optimizer],
-                            feed_dict={cnn['y_input']: batch_y_input, cnn['x_input']: batch_X_input})[0]
-
-            if batch_i == 19:
+                            feed_dict={cnn['y_output']: batch_y_output, cnn['x_input']: batch_X_input})[0]
+            if batch_i == 1:
                 saver = tf.train.Saver()
                 saver.save(sess, 'logs/' + FLAGS.exp_name + '/', global_step=epoch_i)
 
@@ -264,12 +265,12 @@ def test_DNN_pretrained():
         #################################### Testing ########################################
         valid_cost = 0
         for batch_i in range(y_test.shape[0]):
-            batch_y_input = y_test[batch_i, :, :]
-            batch_X_input = x_test[batch_i, :, :, :]
-            valid_cost += sess.run([cnn['cost']], feed_dict={cnn['y_input']: batch_y_input,
+            batch_y_output = y_test[batch_i, :, :]
+            batch_X_input = x_test[batch_i, :, :, :, :]
+            valid_cost += sess.run([cnn['cost']], feed_dict={cnn['y_output']: batch_y_output,
                                                             cnn['x_input']: batch_X_input})[0]
-            true_mat = batch_y_input
-            pred_mat = sess.run([cnn['y']][0], feed_dict={cnn['y_input']: batch_y_input,
+            true_mat = batch_y_output
+            pred_mat = sess.run([cnn['y']][0], feed_dict={cnn['y_output']: batch_y_output,
                                                          cnn['x_input']: batch_X_input})
 
         print('Validation cost:', valid_cost / (y_test.shape[0]))
