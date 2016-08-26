@@ -18,40 +18,48 @@ import multiprocessing
 display_size = 600
 image_size = 227
 my_dpi = 96
-block_size = 80
+block_size = 60
 base_width = 5
 num_blocks = 5
-num_piles = 10
-num_slices = 100
+num_piles = 5
+num_slices = 50
 plt.rcParams['image.cmap'] = 'gray'
-
+assert(block_size * num_blocks < display_size)
 pygame.init()
 pygame.display.set_caption("Blocks will fall?")
 clock = pygame.time.Clock()
-space = pymunk.Space()
 
+space = pymunk.Space()
 space.gravity = (0.0, -100.0)
 space.iterations = 5000
 space.colission_slope = 0.0
 
 all_data = np.zeros((num_piles, image_size, image_size, 3))
 all_slices = np.zeros((num_piles, num_slices))
-space = pymunk.Space()
 
+fig,ax = plt.subplots(1, figsize = (6,6))
+plt_options = pymunk.matplotlib_util.DrawOptions(ax)
+ax.set(adjustable='box-forced', aspect=1, xlim=(0,display_size), ylim=(0, display_size))
+ax.set_axis_off()
 def get_one(i):
-    body, shape = make_pile(space, num_of_blocks = num_blocks, base_coord = [(0., 5.), (display_size, 5.)], base_width = base_width,  mass = 1, block_dim = [block_size, block_size/2], noise = 0.4)
-    plane_heights, labels = combined_center_of_mass(shape)
+    space = pymunk.Space()
+    map(lambda p: p.remove(), filter(lambda c: isinstance(c, mpl.patches.Polygon), ax.get_children()))
+    body, shape = make_pile(space, num_of_blocks = num_blocks, base_coord = [(0., 5.), (display_size, 5.)], base_width = base_width,  block_dim = [block_size, block_size/2], noise = 0.4)
+    plane_heights, labels = combined_center_of_mass(shape, recog_noise = 5)
     slice_vec = labels_to_strips((0,display_size), plane_heights, labels, num_slices)
-    data = space_to_array(space, display_size, image_size)
+    data = space_to_array(space, display_size, image_size, fig, ax, plt_options)
+    # print (ax.get_children())
+    
     return (data, slice_vec, np.any(labels)) 
 
 pool = multiprocessing.Pool(4)
-all_data_slices = pool.map(get_one, range(num_piles))
+all_data_slices = map(get_one, range(num_piles))
 all_data = np.array(map(lambda l:l[0], all_data_slices))
+print all_data.mean()
 all_slices = np.array(map(lambda l:l[1], all_data_slices))
 all_class = np.array(map(lambda l:l[2], all_data_slices))
-print 'mean of slices is ', np.mean(all_class)
 
+print 'mean of slices is ', np.mean(all_class)
 import h5py
 filename = '_'.join(('dataset', str(num_piles), str(num_blocks)))
 filename = filename + '.hdf5'
@@ -59,7 +67,7 @@ f = h5py.File(filename, 'w')
 f.create_dataset('data', data = all_data)
 f.create_dataset('label', data = all_slices)
 f.close()
-plot_pile_slice(all_data[0], all_slices[0])
+plot_many_piles_slices(all_data,all_slices)
 '''
 screen = pygame.display.set_mode((display_size,display_size))
 screen.fill((255,255,255))

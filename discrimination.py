@@ -1,26 +1,36 @@
 import pymunk #1
 import bisect
+from scipy.stats import norm 
+import numpy as np
 
 def sort_pile(blocks):
     assert is_pile(blocks)
     blocks.sort(key = lambda x: x.body.position, reverse = False)
     return blocks
 
-def combined_center_of_mass(blocks):
+def combined_center_of_mass(blocks, recog_noise = 1.0):
 
     nblocks = len(blocks)
     xcoms = [0.0]*(nblocks-1)
     labels = [0]*(nblocks-1) 
     plane_heights = map(lambda block: block.bb.top,blocks[:-1])
-    plane_lengths = map(lambda block: block.bb.right-block.bb.left,blocks[:-1])
+    plane_lengths = map(lambda i: min(blocks[i].bb.right,blocks[i+1].bb.right) - \
+                                  max(blocks[i].bb.left, blocks[i+1].bb.left), range(nblocks-1))
+    plane_mids = map(lambda i: max(blocks[i].bb.left,blocks[i+1].bb.left) + plane_lengths[i]/2., range(nblocks-1))
+    print np.array(plane_lengths)*227/600.0
+    print np.array(plane_mids) * 227/600.0
     for bi, b in enumerate(blocks[:-1]):
-        xcom = sum(map(lambda block: (block.body.position[0]-b.body.position[0])*block.body.mass,
+        xcom = sum(map(lambda block:
+            (block.body.position[0]-plane_mids[bi])*block.body.mass,
             blocks[bi+1:]))
         xcom /= sum(map(lambda block: block.body.mass, blocks[bi+1:]))
-        xcoms[bi] = xcom
-        labels[bi] = -1 if xcom < -0.5*plane_lengths[bi] else \
-                +1 if xcom > 0.5*plane_lengths[bi] else 0
-
+        if recog_noise == 0.0:
+            labels[bi] = -1 if xcom < -0.5*plane_lengths[bi] else \
+                    +1 if xcom > 0.5*plane_lengths[bi] else 0
+        else:
+            labels[bi] = norm.cdf(0.5*plane_lengths[bi],xcom, recog_noise)-\
+                         norm.cdf(-0.5*plane_lengths[bi],xcom, recog_noise)
+        print labels[bi]
     return plane_heights, labels
 
 def is_pile(blocks):
