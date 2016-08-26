@@ -18,7 +18,7 @@ tf.app.flags.DEFINE_integer('batch_size', 128,
                             """Number of images to process in a batch.""")
 tf.app.flags.DEFINE_string('data_dir', '/tmp/blocks_data',
                            """Path to the Blocks data directory.""")
-tf.app.flags.DEFINE_boolean('use_fp16', True,
+tf.app.flags.DEFINE_boolean('use_fp16', False,
                             """Train the model using fp16.""")
 
 # Global constants describing the Blocks data set.
@@ -102,7 +102,7 @@ def _variable_with_weight_decay(name, shape, stddev, wd):
   return var
 
 
-def inputs(eval_data):
+def inputs(eval_data, batch_num=None, hdf_file = None):
   """Construct input for Blocks evaluation using the Reader ops.
 
   Args:
@@ -118,12 +118,15 @@ def inputs(eval_data):
   if not FLAGS.data_dir:
     raise ValueError('Please supply a data_dir')
   data_dir = os.path.join(FLAGS.data_dir, 'blocks-batches-bin')
-  images, labels = DNN_input.inputs(eval_data=eval_data,
-                                    data_dir=data_dir,
+  images, labels = DNN_input.inputs(eval_data=eval_data,batch_num = batch_num,
+                                    data_dir=data_dir, hdf_file = hdf_file,
                                     batch_size=FLAGS.batch_size)
   if FLAGS.use_fp16:
     images = tf.cast(images, tf.float16)
     labels = tf.cast(labels, tf.float16)
+  else:
+    images = tf.cast(images, tf.float32)
+    labels = tf.cast(labels, tf.float32)
   return images, labels
 
 
@@ -223,7 +226,7 @@ def loss(logits, labels):
     Loss tensor of type float.
   """
   # Calculate the average cross entropy loss across the batch.
-  labels = tf.cast(labels, tf.int64)
+  #labels = tf.cast(labels, tf.int64)
   temp_dist = tf.sub(labels, logits)
 
   # cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
