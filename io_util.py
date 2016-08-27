@@ -63,5 +63,6 @@ def plot_many_piles_slices(data,vec):
 def load_hdf5(filename):
    # load from hdf5
    f = h5py.File(filename, 'r')
+   print f.keys()
    return np.array(f['data']), np.array(f['label'])
    

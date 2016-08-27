@@ -39,8 +39,8 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('image_dim', 227, 'first dimension of the image; we are assuming a square image')
 flags.DEFINE_integer('color_channel', 3, 'number of color channels')
 flags.DEFINE_integer('num_gridlines', 50, 'number of grid lines')
-flags.DEFINE_integer('num_minibatches', 100, 'number of minibatches')
-flags.DEFINE_string('exp_name', '1000_5_5', 'some informative name for the experiment')
+flags.DEFINE_integer('num_minibatches', 10000, 'number of minibatches')
+flags.DEFINE_string('exp_name', '100000_5_5', 'some informative name for the experiment')
 
 ################################################################################
 
@@ -212,16 +212,16 @@ def Alexnet(input_shape=[None, FLAGS.image_dim, FLAGS.image_dim, FLAGS.color_cha
 
 
 def test_DNN_pretrained():
-    hdf_file = h5py.File('../data/dataset_1000_5_5.hdf5', 'r')
+    hdf_file = h5py.File('../data/dataset_10000_5_10.hdf5', 'r')
     images = hdf_file.get('data')
     labels = hdf_file.get('label')
     num_images = images.shape[0]
     images = np.reshape(images, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.image_dim, FLAGS.image_dim, FLAGS.color_channel))
     labels = np.reshape(labels, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.num_gridlines))
-    x_train = images[:70]
-    y_train = labels[:70]
-    x_test = images[70:]
-    y_test = labels[70:]
+    x_train = images[:9000]
+    y_train = labels[:9000]
+    x_test = images[1000:]
+    y_test = labels[1000:]
 
     cnn = Alexnet()
     n_epochs = 400
@@ -243,7 +243,7 @@ def test_DNN_pretrained():
         train_cost = 0
         for batch_i in np.random.permutation(range(y_train.shape[0])):
             tic = time.time()
-            print batch_i
+            # print batch_i
             batch_y_output = y_train[batch_i, :, :]
             batch_X_input = x_train[batch_i, :, :, :, :]
             temp = sess.run([cnn['cost'], optimizer],
@@ -253,10 +253,10 @@ def test_DNN_pretrained():
                 saver.save(sess, 'logs/' + FLAGS.exp_name + '/', global_step=0)
 
 
-            print 'Minibatch cost: ', temp
+            # print 'Minibatch cost: ', temp
             train_cost += temp
             toc = time.time()
-            print 'time per minibatch: ', toc - tic
+            # print 'time per minibatch: ', toc - tic
         print('Train cost:', train_cost / (y_train.shape[0]))
         text_file = open("logs/" + FLAGS.exp_name + "/train_costs.txt", "a")
         text_file.write(str(train_cost / (y_train.shape[0])))

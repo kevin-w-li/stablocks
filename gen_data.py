@@ -20,9 +20,9 @@ my_dpi = 96
 block_size = 60
 base_width = 5
 num_blocks = 5
-num_piles = 10
+num_piles = 100000
 num_slices = 50
-recog_noise = 10
+recog_noise = 5
 plt.rcParams['image.cmap'] = 'gray'
 assert(block_size * num_blocks < display_size)
 pygame.init()
@@ -34,7 +34,7 @@ space.gravity = (0.0, -100.0)
 space.iterations = 5000
 space.colission_slope = 0.0
 
-all_data = np.zeros((num_piles, image_size, image_size, 3))
+all_data = np.zeros((num_piles, image_size, image_size, 3), dtype=np.uint8)
 all_slices = np.zeros((num_piles, num_slices))
 
 fig,ax = plt.subplots(1, figsize = (6,6))
