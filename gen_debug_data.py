@@ -1,27 +1,29 @@
-import matplotlib as mpl
-mpl.use('Agg')
 import sys, io
 import pygame
+from PIL import Image
 from matplotlib import pyplot as plt
+import matplotlib as mpl
 from pygame.locals import *
 from pymunk import pygame_util
 from pymunk import matplotlib_util
 import pymunk #1
+import random
 from shapes import *
+from dynamics import *
 from discrimination import *
 import numpy as np
 from io_util import *
 import multiprocessing
-import h5py
 
 display_size = 600
 image_size = 227
 my_dpi = 96
-block_size = 60
+block_size = 150
 base_width = 5
-num_blocks = 5
-num_piles = 10
-num_slices = 50
+num_blocks = 3
+num_piles = 5
+num_rep = 100 # number of repetitions
+num_slices = 100
 recog_noise = 10
 plt.rcParams['image.cmap'] = 'gray'
 assert(block_size * num_blocks < display_size)
@@ -51,21 +53,23 @@ def get_one(i):
     # print (ax.get_children())
     return (data, slice_vec, all(np.array(labels)>0.5))
 
-pool = multiprocessing.Pool(20)
+pool = multiprocessing.Pool(4)
 all_data_slices = pool.map(get_one, range(num_piles))
 all_data = np.array(map(lambda l:l[0], all_data_slices))
 all_slices = np.array(map(lambda l:l[1], all_data_slices))
+all_data = np.tile(all_data, [num_rep,1,1,1])
+all_slices = np.tile(all_slices, [num_rep,1])
 all_class = np.array(map(lambda l:l[2], all_data_slices))
 
 print 'mean of class is ', np.mean(all_class)
-filename = '_'.join(('data/dataset', str(num_piles), str(num_blocks), str(recog_noise)))
+import h5py
+filename = '_'.join(('data/debug_dataset', str(num_piles), str(num_blocks), str(recog_noise)))
 filename = filename + '.hdf5'
 f = h5py.File(filename, 'w')
 f.create_dataset('data', data = all_data)
 f.create_dataset('label', data = all_slices)
 f.close()
 plot_many_piles_slices(all_data,all_slices)
-
 '''
 screen = pygame.display.set_mode((display_size,display_size))
 screen.fill((255,255,255))
