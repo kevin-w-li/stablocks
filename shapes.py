@@ -23,7 +23,9 @@ def add_block(space, position = [0.0,0.0], mass = 1, block_dim = [50, 50]):
     shape.elasticity = 0.0
     return body, shape
 
-def make_pile_given_noise(space, base_coord = [(0., 100.), (500., 100.)], base_width = 10,  mass = 1, block_dim = [100,40], noise_list=[0] * 5):
+def make_pile_given_noise(space=None, base_coord = [(0., 100.), (500., 100.)], base_width = 10,  mass = 1, block_dim = [100,40], noise_list=[0] * 5):
+    if space is None:
+        space = []
     num_of_blocks = len(noise_list)
     add_base(space, base_coord[0], base_coord[1], width=base_width)
     first_block_pos = [(base_coord[0][0] + base_coord[1][0]) / 2., base_coord[0][1] + base_width + block_dim[1] / 2.]
@@ -41,6 +43,7 @@ def make_pile_given_noise(space, base_coord = [(0., 100.), (500., 100.)], base_w
         last_top = last_block_pos[1] + block_dim[1]/2.
         body_list.append(body)
         shape_list.append(shape)
+    print space.shapes
     return body_list, shape_list
 '''
 def make_pile(space, num_of_blocks = 5, base_coord = [(0, 100), (500, 100)], mass = 1, size = 10):
