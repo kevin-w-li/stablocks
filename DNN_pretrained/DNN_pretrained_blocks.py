@@ -211,7 +211,7 @@ def Alexnet(input_shape=[None, FLAGS.image_dim, FLAGS.image_dim, FLAGS.color_cha
 
 
 def test_DNN_pretrained():
-    hdf_file = h5py.File('../tmp/blocks_data/dataset_1000_5.hdf5', 'r')
+    hdf_file = h5py.File('../tmp/blocks_data/debug_dataset_5_3_10.hdf5', 'r')
     images = hdf_file.get('data')
     labels = hdf_file.get('label')
     num_images = images.shape[0]
@@ -272,7 +272,15 @@ def test_DNN_pretrained():
             true_mat = batch_y_output
             pred_mat = sess.run([cnn['y']][0], feed_dict={cnn['y_output']: batch_y_output,
                                                          cnn['x_input']: batch_X_input})
-
+        fig0, axes0 = plt.subplots(1, 2, squeeze=False, figsize=(10, 5))
+        axes0[0][0].imshow(true_mat, aspect='auto', interpolation="nearest", vmin=0, vmax=1)
+        #axes0[0][0].set_xticks(range(11))
+        axes0[0][0].set_title('True probs')
+        axes0[0][1].imshow(pred_mat, aspect='auto', interpolation="nearest", vmin=0, vmax=1)
+        #axes0[0][1].set_xticks(range(11))
+        axes0[0][1].set_title('Pred probs')
+#        plt.colorbar()
+        plt.savefig('logs/' + FLAGS.exp_name + '/prob_mat.png', bbox_inches='tight')
         print('Validation cost:', valid_cost / (y_test.shape[0]))
         text_file = open("logs/" + FLAGS.exp_name + "/test_costs.txt", "a")
         text_file.write(str(valid_cost / (y_test.shape[0])))
