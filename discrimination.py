@@ -26,8 +26,8 @@ def combined_center_of_mass(blocks, recog_noise = 1.0):
             labels[bi] = -1 if xcom < -0.5*plane_lengths[bi] else \
                     +1 if xcom > 0.5*plane_lengths[bi] else 0
         else:
-            labels[bi] = norm.cdf(0.5*plane_lengths[bi],xcom, recog_noise)-\
-                         norm.cdf(-0.5*plane_lengths[bi],xcom, recog_noise)
+            labels[bi] = norm.cdf(0.5 * plane_lengths[bi], xcom, recog_noise) - \
+                         norm.cdf(-0.5 * plane_lengths[bi], xcom, recog_noise)
     return plane_heights, labels
 
 def is_pile(blocks):

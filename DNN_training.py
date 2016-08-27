@@ -18,7 +18,7 @@ import tensorflow as tf
 
 FLAGS = tf.app.flags.FLAGS
 
-tf.app.flags.DEFINE_string('train_dir', '/tmp/blocks_train',
+tf.app.flags.DEFINE_string('train_dir', 'tmp',
                            """Directory where to write event logs """
                            """and checkpoint.""")
 tf.app.flags.DEFINE_integer('max_steps', 1000000,
@@ -97,7 +97,7 @@ def train(hdf_file):
 
 
 def main(argv=None):  # pylint: disable=unused-argument
-  hdf_file = h5py.File('tmp/blocks_data/dataset_1000_5.hdf5', 'r')
+  hdf_file = h5py.File('data/dataset_1000_5_5.hdf5', 'r')
   if tf.gfile.Exists(FLAGS.train_dir):
     tf.gfile.DeleteRecursively(FLAGS.train_dir)
   tf.gfile.MakeDirs(FLAGS.train_dir)
