@@ -10,7 +10,8 @@
 #
 #
 ################################################################################
-
+import matplotlib
+matplotlib.use('Agg')
 from numpy import *
 import os
 from pylab import *
@@ -37,9 +38,9 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_integer('image_dim', 227, 'first dimension of the image; we are assuming a square image')
 flags.DEFINE_integer('color_channel', 3, 'number of color channels')
-flags.DEFINE_integer('num_gridlines', 100, 'number of grid lines')
+flags.DEFINE_integer('num_gridlines', 50, 'number of grid lines')
 flags.DEFINE_integer('num_minibatches', 100, 'number of minibatches')
-flags.DEFINE_string('exp_name', 'initial_exp', 'some informative name for the experiment')
+flags.DEFINE_string('exp_name', '1000_5_5', 'some informative name for the experiment')
 
 ################################################################################
 
@@ -211,16 +212,16 @@ def Alexnet(input_shape=[None, FLAGS.image_dim, FLAGS.image_dim, FLAGS.color_cha
 
 
 def test_DNN_pretrained():
-    hdf_file = h5py.File('../tmp/blocks_data/debug_dataset_5_3_10.hdf5', 'r')
+    hdf_file = h5py.File('../data/dataset_1000_5_5.hdf5', 'r')
     images = hdf_file.get('data')
     labels = hdf_file.get('label')
     num_images = images.shape[0]
     images = np.reshape(images, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.image_dim, FLAGS.image_dim, FLAGS.color_channel))
     labels = np.reshape(labels, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.num_gridlines))
-    x_train = images[:-2]
-    y_train = labels[:-2]
-    x_test = images[-2:]
-    y_test = labels[-2:]
+    x_train = images[:70]
+    y_train = labels[:70]
+    x_test = images[70:]
+    y_test = labels[70:]
 
     cnn = Alexnet()
     n_epochs = 400
@@ -249,7 +250,7 @@ def test_DNN_pretrained():
                             feed_dict={cnn['y_output']: batch_y_output, cnn['x_input']: batch_X_input})[0]
             if batch_i == 1:
                 saver = tf.train.Saver()
-                saver.save(sess, 'logs/' + FLAGS.exp_name + '/', global_step=epoch_i)
+                saver.save(sess, 'logs/' + FLAGS.exp_name + '/', global_step=0)
 
 
             print 'Minibatch cost: ', temp
