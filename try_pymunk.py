@@ -52,10 +52,10 @@ while True:
                 print i, j
                 b_list, s_list = make_pile_given_noise(space=space, noise_list=position_noise_list,
                                                        hor_ver_list=hor_ver_list)
-                for step_num in range(300):
+                for step_num in range(100):
                     screen.fill((255, 255, 255))
                     space.debug_draw(draw_options)
-                    if step_num == 100:
+                    if step_num == 20:
                         b_list[j].apply_force_at_local_point([noise, 0.], b_list[j].position)
                     space.step(1 / 50.0)
                     clock.tick(50)
