@@ -18,11 +18,12 @@ import multiprocessing
 display_size = 600
 image_size = 227
 my_dpi = 96
-block_size = 60
+block_size = 150
 base_width = 5
-num_blocks = 5
+num_blocks = 3
 num_piles = 5
-num_slices = 50
+num_rep = 100 # number of repetitions
+num_slices = 100
 recog_noise = 10
 plt.rcParams['image.cmap'] = 'gray'
 assert(block_size * num_blocks < display_size)
@@ -55,14 +56,14 @@ def get_one(i):
 pool = multiprocessing.Pool(4)
 all_data_slices = pool.map(get_one, range(num_piles))
 all_data = np.array(map(lambda l:l[0], all_data_slices))
-print all_data.shape
-print all_data.mean()
 all_slices = np.array(map(lambda l:l[1], all_data_slices))
+all_data = np.tile(all_data, [num_rep,1,1,1])
+all_slices = np.tile(all_slices, [num_rep,1])
 all_class = np.array(map(lambda l:l[2], all_data_slices))
 
 print 'mean of class is ', np.mean(all_class)
 import h5py
-filename = '_'.join(('data/dataset', str(num_piles), str(num_blocks), str(recog_noise)))
+filename = '_'.join(('data/debug_dataset', str(num_piles), str(num_blocks), str(recog_noise)))
 filename = filename + '.hdf5'
 f = h5py.File(filename, 'w')
 f.create_dataset('data', data = all_data)

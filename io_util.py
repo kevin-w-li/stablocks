@@ -18,7 +18,6 @@ def space_to_array(space, display_size, image_size, fig, ax, plt_options):
     buf.seek(0)
     im = Image.open(buf)
     im = im.resize((image_size,image_size),  Image.ANTIALIAS)
-    # im = np.zeros((image_size,image_size,3))
     data = np.array(im)
     data = data[:,:,0:3]
     plt.close()

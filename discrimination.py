@@ -17,8 +17,6 @@ def combined_center_of_mass(blocks, recog_noise = 1.0):
     plane_lengths = map(lambda i: min(blocks[i].bb.right,blocks[i+1].bb.right) - \
                                   max(blocks[i].bb.left, blocks[i+1].bb.left), range(nblocks-1))
     plane_mids = map(lambda i: max(blocks[i].bb.left,blocks[i+1].bb.left) + plane_lengths[i]/2., range(nblocks-1))
-    print np.array(plane_lengths)*227/600.0
-    print np.array(plane_mids) * 227/600.0
     for bi, b in enumerate(blocks[:-1]):
         xcom = sum(map(lambda block:
             (block.body.position[0]-plane_mids[bi])*block.body.mass,
@@ -30,7 +28,6 @@ def combined_center_of_mass(blocks, recog_noise = 1.0):
         else:
             labels[bi] = norm.cdf(0.5*plane_lengths[bi],xcom, recog_noise)-\
                          norm.cdf(-0.5*plane_lengths[bi],xcom, recog_noise)
-        print labels[bi]
     return plane_heights, labels
 
 def is_pile(blocks):
