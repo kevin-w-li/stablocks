@@ -200,9 +200,15 @@ def Alexnet(input_shape=[None, FLAGS.image_dim, FLAGS.image_dim, FLAGS.color_cha
     fc7b = tf.constant(net_data["fc7"][1])
     fc7 = tf.nn.relu_layer(fc6, fc7W, fc7b)
 
-    W_regression = weight_variable([4096, 32 * 32])
-    b_regression = bias_variable([32 * 32])
-    h_regression = tf.nn.sigmoid(tf.matmul(fc7, W_regression) + b_regression)
+    W_regression = weight_variable([4096, 64 * 64])
+    b_regression = bias_variable([64 * 64])
+    h_regression = tf.nn.relu(tf.matmul(fc7, W_regression) + b_regression)
+
+    W2_regression = weight_variable([64 * 64, 227 * 227])
+    b2_regression = bias_variable([227 * 227])
+    h2_regression = tf.nn.sigmoid(tf.matmul(h_regression, W2_regression) + b2_regression)
+
+
     #
     # temp_dist = tf.sub(y, h_regression)
     # SE = tf.nn.l2_loss(temp_dist)
@@ -211,34 +217,48 @@ def Alexnet(input_shape=[None, FLAGS.image_dim, FLAGS.image_dim, FLAGS.color_cha
 
     # #####Deconvolution to the heatmap
 
-    deconv0_weight = weight_variable([7, 7, 1, 1])
-    convt_0 = tf.nn.relu(
-        tf.nn.conv2d_transpose(tf.reshape(h_regression, [-1, 32, 32, 1]),
-                               filter=deconv0_weight,
-                               output_shape=[FLAGS.num_images / (FLAGS.num_minibatches), 64, 64, 1],
-                               strides=[1, 2, 2, 1]))
+    # deconv000_weight = weight_variable([3, 3, 1, 1])
+    # convt_000 = tf.nn.relu(
+    #     tf.nn.conv2d_transpose(tf.reshape(h_regression, [-1, 8, 8, 1]),
+    #                            filter=deconv000_weight,
+    #                            output_shape=[FLAGS.num_images / (FLAGS.num_minibatches), 16, 16, 1],
+    #                            strides=[1, 2, 2, 1]))
+    #
+    # deconv00_weight = weight_variable([7, 7, 1, 1])
+    # convt_00 = tf.nn.relu(
+    #     tf.nn.conv2d_transpose(tf.reshape(h_regression, [-1, 16, 16, 1]),
+    #                            filter=deconv00_weight,
+    #                            output_shape=[FLAGS.num_images / (FLAGS.num_minibatches), 32, 32, 1],
+    #                            strides=[1, 2, 2, 1]))
 
-    deconv1_weight = weight_variable([7, 7, 1, 1])
-    convt_1 = tf.nn.relu(
-        tf.nn.conv2d_transpose(tf.reshape(convt_0, [-1, 64, 64, 1]),
-                               filter=deconv1_weight,
-                               output_shape=[FLAGS.num_images / (FLAGS.num_minibatches), 128, 128, 1],
-                               strides=[1, 2, 2, 1]))
+    # deconv0_weight = weight_variable([5, 5, 1, 1])
+    # convt_0 = tf.nn.relu(
+    #     tf.nn.conv2d_transpose(tf.reshape(h_regression, [-1, 32, 32, 1]),
+    #                            filter=deconv0_weight,
+    #                            output_shape=[FLAGS.num_images / (FLAGS.num_minibatches), 64, 64, 1],
+    #                            strides=[1, 2, 2, 1]))
 
-    deconv2_weight = weight_variable([7, 7, 1, 1])
-    convt_2 = tf.nn.sigmoid(
-        tf.nn.conv2d_transpose(convt_1,
-                               filter=deconv2_weight,
-                               output_shape=[FLAGS.num_images / (FLAGS.num_minibatches), FLAGS.image_dim + 29, FLAGS.image_dim + 29, 1],
-                               strides=[1, 2, 2, 1]))
+    # deconv1_weight = weight_variable([5, 5, 1, 1])
+    # convt_1 = tf.nn.relu(
+    #     tf.nn.conv2d_transpose(tf.reshape(h_regression, [-1, 64, 64, 1]),
+    #                            filter=deconv1_weight,
+    #                            output_shape=[FLAGS.num_images / (FLAGS.num_minibatches), 128, 128, 1],
+    #                            strides=[1, 2, 2, 1]))
+    #
+    # deconv2_weight = weight_variable([7, 7, 1, 1])
+    # convt_2 = tf.nn.sigmoid(
+    #     tf.nn.conv2d_transpose(convt_1,
+    #                            filter=deconv2_weight,
+    #                            output_shape=[FLAGS.num_images / (FLAGS.num_minibatches), FLAGS.image_dim + 29, FLAGS.image_dim + 29, 1],
+    #                            strides=[1, 2, 2, 1]))
 
-    target_resized = tf.slice(x, [0, 0, 0, 0], [FLAGS.num_images / (FLAGS.num_minibatches), FLAGS.image_dim - 1, FLAGS.image_dim - 1, 1])
-    target_resized = tf.pad(target_resized, [[0, 0], [15, 15], [15, 15], [0,0]], "CONSTANT")
-    target_grayscaled = tf.image.rgb_to_grayscale(target_resized) / 255.
-    temp_dist = tf.sub(target_grayscaled, convt_2)
+    target_resized = x #tf.slice(x, [0, 0, 0, 0], [FLAGS.num_images / (FLAGS.num_minibatches), FLAGS.image_dim - 1, FLAGS.image_dim - 1, 1])
+    #target_resized = tf.pad(target_resized, [[0, 0], [15, 15], [15, 15], [0,0]], "CONSTANT")
+    target_grayscaled = (tf.image.rgb_to_grayscale(target_resized) / 255.)
+    temp_dist = tf.sub(target_grayscaled, tf.reshape(h2_regression, [-1, 227, 227, 1]))
     SE = tf.nn.l2_loss(temp_dist)
     MSE = tf.reduce_mean(SE, name='mse')
-    return {'cost': MSE, 'y_output': y, 'x_input': x, 'y': convt_2, 'grayscale':target_grayscaled}
+    return {'cost': MSE, 'y_output': y, 'x_input': x, 'y': tf.reshape(h2_regression, [-1, 227, 227, 1]), 'grayscale':target_grayscaled}
 
 
 
@@ -253,12 +273,12 @@ def test_DNN_pretrained():
     y_train = labels[:90]
     x_test = images[90:]
     y_test = labels[90:]
-
+#check why the blue area doesn't get blue '
     cnn = Alexnet()
     n_epochs = 400
-    learning_rate = 0.01
-    optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=1e-07).minimize(cnn['cost'])
-
+    learning_rate = 0.001
+    #optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=0.4, beta2=0.7, epsilon=1e-5).minimize(cnn['cost'])
+    optimizer = tf.train.RMSPropOptimizer(learning_rate).minimize(cnn['cost'])
     try:
         shutil.rmtree('logs/' + FLAGS.exp_name)
     except:
@@ -279,9 +299,9 @@ def test_DNN_pretrained():
             batch_X_input = x_train[batch_i, :, :, :, :]
             temp = sess.run([cnn['cost'], optimizer],
                             feed_dict={cnn['y_output']: batch_y_output, cnn['x_input']: batch_X_input})[0]
-            if batch_i == 1:
-                saver = tf.train.Saver()
-                saver.save(sess, 'logs/' + FLAGS.exp_name + '/', global_step=0)
+            # if batch_i == 1:
+            #     saver = tf.train.Saver()
+            #     saver.save(sess, 'logs/' + FLAGS.exp_name + '/', global_step=0)
 
 
             print 'Minibatch cost: ', temp
