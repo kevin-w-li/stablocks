@@ -40,13 +40,13 @@ flags.DEFINE_integer('image_dim', 227, 'first dimension of the image; we are ass
 flags.DEFINE_integer('color_channel', 3, 'number of color channels')
 flags.DEFINE_integer('num_gridlines', 100, 'number of grid lines')
 flags.DEFINE_integer('num_minibatches', 100, 'number of minibatches')
-flags.DEFINE_string('exp_name', '100000_5_5', 'some informative name for the experiment')
+flags.DEFINE_integer('num_images', 500, 'number of minibatches')
+flags.DEFINE_string('exp_name', 'deconv_1000_5', 'some informative name for the experiment')
 
 ################################################################################
 
 
 net_data = load("bvlc_alexnet.npy").item()
-
 
 def conv(input, kernel, biases, k_h, k_w, c_o, s_h, s_w, padding="VALID", group=1):
     '''From https://github.com/ethereon/caffe-tensorflow
@@ -200,35 +200,54 @@ def Alexnet(input_shape=[None, FLAGS.image_dim, FLAGS.image_dim, FLAGS.color_cha
     fc7b = tf.constant(net_data["fc7"][1])
     fc7 = tf.nn.relu_layer(fc6, fc7W, fc7b)
 
-    W_regression = weight_variable([4096, FLAGS.num_gridlines])
-    b_regression = bias_variable([FLAGS.num_gridlines])
+    W_regression = weight_variable([4096, 32 * 32])
+    b_regression = bias_variable([32 * 32])
     h_regression = tf.nn.sigmoid(tf.matmul(fc7, W_regression) + b_regression)
+    #
+    # temp_dist = tf.sub(y, h_regression)
+    # SE = tf.nn.l2_loss(temp_dist)
+    # MSE = tf.reduce_mean(SE, name='mse')
+    # return {'cost': MSE, 'y_output': y, 'x_input': x, 'y': h_regression}
 
-    temp_dist = tf.sub(y, h_regression)
+    # #####Deconvolution to the heatmap
+
+    deconv0_weight = weight_variable([7, 7, 1, 1])
+    convt_0 = tf.nn.relu(
+        tf.nn.conv2d_transpose(tf.reshape(h_regression, [-1, 32, 32, 1]),
+                               filter=deconv0_weight,
+                               output_shape=[FLAGS.num_images / (FLAGS.num_minibatches), 64, 64, 1],
+                               strides=[1, 2, 2, 1]))
+
+    deconv1_weight = weight_variable([7, 7, 1, 1])
+    convt_1 = tf.nn.relu(
+        tf.nn.conv2d_transpose(tf.reshape(convt_0, [-1, 64, 64, 1]),
+                               filter=deconv1_weight,
+                               output_shape=[FLAGS.num_images / (FLAGS.num_minibatches), 128, 128, 1],
+                               strides=[1, 2, 2, 1]))
+
+    deconv2_weight = weight_variable([7, 7, 1, 1])
+    convt_2 = tf.nn.sigmoid(
+        tf.nn.conv2d_transpose(convt_1,
+                               filter=deconv2_weight,
+                               output_shape=[FLAGS.num_images / (FLAGS.num_minibatches), FLAGS.image_dim + 29, FLAGS.image_dim + 29, 1],
+                               strides=[1, 2, 2, 1]))
+
+    target_resized = tf.slice(x, [0, 0, 0, 0], [FLAGS.num_images / (FLAGS.num_minibatches), FLAGS.image_dim - 1, FLAGS.image_dim - 1, 1])
+    target_resized = tf.pad(target_resized, [[0, 0], [15, 15], [15, 15], [0,0]], "CONSTANT")
+    target_grayscaled = tf.image.rgb_to_grayscale(target_resized) / 255.
+    temp_dist = tf.sub(target_grayscaled, convt_2)
     SE = tf.nn.l2_loss(temp_dist)
     MSE = tf.reduce_mean(SE, name='mse')
-    return {'cost': MSE, 'y_output': y, 'x_input': x, 'y': h_regression}
+    return {'cost': MSE, 'y_output': y, 'x_input': x, 'y': convt_2, 'grayscale':target_grayscaled}
 
 
 
 def test_DNN_pretrained():
-    # hdf_file = h5py.File('../data/dataset_10000_5_10.hdf5', 'r')
-    # images = hdf_file.get('data')
-    # labels = hdf_file.get('label')
-    # num_images = images.shape[0]
-    # images = np.reshape(images, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.image_dim, FLAGS.image_dim, FLAGS.color_channel))
-    # labels = np.reshape(labels, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.num_gridlines))
-    # x_train = images[:9000]
-    # y_train = labels[:9000]
-    # x_test = images[1000:]
-    # y_test = labels[1000:]
-    hdf_file = h5py.File('../data/dataset_1000_5.hdf5', 'r')
+    hdf_file = h5py.File('../data/debug_dataset_5_3_10.hdf5', 'r')
     images = hdf_file.get('data')
     labels = hdf_file.get('label')
     num_images = images.shape[0]
-    images = np.reshape(images, (
-    FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.image_dim, FLAGS.image_dim,
-    FLAGS.color_channel))
+    images = np.reshape(images, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.image_dim, FLAGS.image_dim, FLAGS.color_channel))
     labels = np.reshape(labels, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.num_gridlines))
     x_train = images[:90]
     y_train = labels[:90]
@@ -237,7 +256,7 @@ def test_DNN_pretrained():
 
     cnn = Alexnet()
     n_epochs = 400
-    learning_rate = 0.0001
+    learning_rate = 0.01
     optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=1e-07).minimize(cnn['cost'])
 
     try:
@@ -265,10 +284,10 @@ def test_DNN_pretrained():
                 saver.save(sess, 'logs/' + FLAGS.exp_name + '/', global_step=0)
 
 
-            # print 'Minibatch cost: ', temp
+            print 'Minibatch cost: ', temp
             train_cost += temp
             toc = time.time()
-            # print 'time per minibatch: ', toc - tic
+            print 'time per minibatch: ', toc - tic
         print('Train cost:', train_cost / (y_train.shape[0]))
         text_file = open("logs/" + FLAGS.exp_name + "/train_costs.txt", "a")
         text_file.write(str(train_cost / (y_train.shape[0])))
@@ -284,12 +303,14 @@ def test_DNN_pretrained():
                                                             cnn['x_input']: batch_X_input})[0]
             true_mat = batch_y_output
             pred_mat = sess.run([cnn['y']][0], feed_dict={cnn['y_output']: batch_y_output,
-                                                         cnn['x_input']: batch_X_input})
+                                                         cnn['x_input']: batch_X_input})[0]
+            target = sess.run(cnn['grayscale'], feed_dict = {cnn['y_output']: batch_y_output, cnn['x_input']: batch_X_input})[0]
+
         fig0, axes0 = plt.subplots(1, 2, squeeze=False, figsize=(10, 5))
-        axes0[0][0].imshow(true_mat, aspect='auto', interpolation="nearest", vmin=0, vmax=1)
+        axes0[0][0].imshow(target.squeeze(), aspect='auto', interpolation="nearest", vmin=0, vmax=1)
         #axes0[0][0].set_xticks(range(11))
         axes0[0][0].set_title('True probs')
-        axes0[0][1].imshow(pred_mat, aspect='auto', interpolation="nearest", vmin=0, vmax=1)
+        axes0[0][1].imshow(pred_mat.squeeze(), aspect='auto', interpolation="nearest", vmin=0, vmax=1)
         #axes0[0][1].set_xticks(range(11))
         axes0[0][1].set_title('Pred probs')
 #        plt.colorbar()
