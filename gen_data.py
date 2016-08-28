@@ -20,7 +20,7 @@ my_dpi = 96
 block_size = 60
 base_width = 5
 num_blocks = 5
-num_piles = 100000
+num_piles = 11
 num_slices = 50
 recog_noise = 5
 plt.rcParams['image.cmap'] = 'gray'
@@ -51,7 +51,7 @@ def get_one(i):
     # print (ax.get_children())
     return (data, slice_vec, all(np.array(labels)>0.5))
 
-pool = multiprocessing.Pool(20)
+pool = multiprocessing.Pool(2)
 all_data_slices = pool.map(get_one, range(num_piles))
 all_data = np.array(map(lambda l:l[0], all_data_slices))
 all_slices = np.array(map(lambda l:l[1], all_data_slices))

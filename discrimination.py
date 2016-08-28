@@ -3,9 +3,9 @@ import bisect
 from scipy.stats import norm 
 import numpy as np
 
+
 def sort_pile(blocks):
-    assert is_pile(blocks)
-    blocks.sort(key = lambda x: x.body.position, reverse = False)
+    blocks.sort(key = lambda x: x.body.position[1], reverse = False)
     return blocks
 
 def combined_center_of_mass(blocks, recog_noise = 1.0):
@@ -31,7 +31,6 @@ def combined_center_of_mass(blocks, recog_noise = 1.0):
     return plane_heights, labels
 
 def is_pile(blocks):
-
     for bi in xrange(len(blocks)-1):
         if (blocks[bi+1].bb.bottom - blocks[bi].bb.top) != 0.0:
             return False

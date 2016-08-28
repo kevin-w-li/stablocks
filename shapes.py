@@ -9,11 +9,11 @@ def add_block(space, position = [0.0,0.0], mass = 1, block_dim = [50, 50]):
     width = block_dim[0]
     height = block_dim[1]
 
-    coords = [[- width / 2., - height / 2.], [-width /2. , height / 2.], [width / 2., height / 2.], [width / 2., - height / 2.]]
+    coords = [[- width / 2.+1, - height / 2.+1], [-width /2.+1 , height / 2.-1], [width / 2.-1, height / 2.-1], [width / 2.-1, - height / 2.+1]]
     moment = pymunk.moment_for_poly(mass, coords)
     body = pymunk.Body(mass,moment)
     body.position = position
-    shape = pymunk.Poly(body,coords)
+    shape = pymunk.Poly(body,coords, radius = 1)
     space.add(body,shape)
     shape.friction = 1000.0
     shape.elasticity = 0.0
@@ -44,7 +44,6 @@ def make_pile_given_noise(space=None, base_coord = [(0., 100.), (500., 100.)], b
         last_top = last_block_pos[1] + perm_block_dim[1] / 2.
         body_list.append(body)
         shape_list.append(shape)
-    print space.shapes
     return body_list, shape_list
 
 def make_pile(space, num_of_blocks = 5, base_coord = [(0., 100.), (500., 100.)], base_width = 10,  mass = 1, block_dim = [100,40], noise=1):
@@ -72,9 +71,9 @@ def add_base(space, p1, p2, width = 5):
     mid =  (p1[0] + p2[0])/2.0, (p1[1] + p2[1])/2.0
     half_length = (p2[0]-p1[0])/2.0
     body.position = mid
-    coords = [[-half_length,-width], [+half_length,-width], \
-        [-half_length, +width], [+half_length, +width]]
-    shape = pymunk.Poly(body, coords)
+    coords = [[-half_length+1,-width+1], [+half_length-1,-width+1], \
+        [-half_length+1, +width-1], [+half_length-1, +width-1]]
+    shape = pymunk.Poly(body, coords, radius = 1)
     space.add(shape)
     shape.friction = 1000.0
     shape.elasticity = 0.0
