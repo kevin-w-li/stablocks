@@ -1,29 +1,32 @@
 import matplotlib as mpl
-mpl.use('Agg')
+# mpl.use('Agg')
 import sys, io
 import pygame
 from matplotlib import pyplot as plt
+import pygame
 from pygame.locals import *
+import pymunk #1
 from pymunk import pygame_util
 from pymunk import matplotlib_util
-import pymunk #1
 from shapes import *
 from discrimination import *
 import numpy as np
 from io_util import *
 import multiprocessing
 import h5py
+import cPickle as pkl
 
-display_size = 600
+display_size = 1000
 image_size = 227
 my_dpi = 96
-block_size = 60
+block_size = 100
 base_width = 5
-num_blocks = 5
-num_piles = 11
+num_blocks = 8
+num_piles = 5
 num_slices = 50
 recog_noise = 5
 plt.rcParams['image.cmap'] = 'gray'
+#plt.rcParams['image.interpolation'] = 'none'
 assert(block_size * num_blocks < display_size)
 pygame.init()
 pygame.display.set_caption("Blocks will fall?")
@@ -49,34 +52,24 @@ def get_one(i):
     slice_vec = labels_to_strips((0,display_size), plane_heights, labels, num_slices)
     data = space_to_array(space, display_size, image_size, fig, ax, plt_options)
     # print (ax.get_children())
-    return (data, slice_vec, all(np.array(labels)>0.5))
+    return (data, slice_vec, all(np.array(labels)>0.5), space)
 
-pool = multiprocessing.Pool(2)
-all_data_slices = pool.map(get_one, range(num_piles))
+all_data_slices = map(get_one, range(num_piles))
 all_data = np.array(map(lambda l:l[0], all_data_slices))
 all_slices = np.array(map(lambda l:l[1], all_data_slices))
-all_class = np.array(map(lambda l:l[2], all_data_slices))
-
-print 'mean of class is ', np.mean(all_class)
-filename = '_'.join(('data/dataset', str(num_piles), str(num_blocks), str(recog_noise)))
+all_classes = np.array(map(lambda l:l[2], all_data_slices))
+all_spaces = np.array(map(lambda l:l[3], all_data_slices))
+print 'mean of class is ', np.mean(all_classes)
+filename = '_'.join(('data/exp_data', str(num_piles), str(num_blocks), str(recog_noise)))
 filename = filename + '.hdf5'
 f = h5py.File(filename, 'w')
 f.create_dataset('data', data = all_data)
 f.create_dataset('label', data = all_slices)
+f.create_dataset('class', data = all_classes)
+f.close()
+f = open('data/exp_spaces','w', pkl.HIGHEST_PROTOCOL)
+pkl.dump(all_spaces[0].shapes[0].body.position, f)
 f.close()
 plot_many_piles_slices(all_data,all_slices)
-
-'''
-screen = pygame.display.set_mode((display_size,display_size))
-screen.fill((255,255,255))
-
-draw_options = pygame_util.DrawOptions(screen)
-space.debug_draw(draw_options)
-print 'go'
-while True:
-    space.step(1/50.0)
-    screen.fill((255,255,255))
-    space.debug_draw(draw_options)
-    pygame.display.flip()
-    clock.tick(50)
-'''
+save_space(all_spaces,'exp/spaces')
+loaded_spaces = load_space('exp/spaces')
