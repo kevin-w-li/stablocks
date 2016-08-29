@@ -43,9 +43,9 @@ ax.set_axis_off()
 def get_one(i):
     space = pymunk.Space()
     map(lambda p: p.remove(), filter(lambda c: isinstance(c, mpl.patches.Polygon), ax.get_children()))
-    blocks = make_pile(space, num_of_blocks = num_blocks, base_coord = [(0., 5.), (display_size, 5.)], base_width = base_width,  block_dim = [block_size, block_size/2], noise = 0.5)
+    blocks = make_pile(space, num_of_blocks = num_blocks, base_coord = [(0., 5.), (display_size, 5.)], base_width = base_width,  block_dim = [block_size, block_size/2], noise = 0.35)
 
-    plane_heights, level_labels, det_level_labels = combined_center_of_mass(blocks, recog_noise = recog_noise, n_above = 1)
+    plane_heights, level_labels, det_level_labels = combined_center_of_mass(blocks, recog_noise = recog_noise, n_above = 2)
     
     block_labels = labels_to_block_labels(blocks, plane_heights, level_labels)
     det_block_labels = det_labels_to_block_labels(blocks, plane_heights, det_level_labels)
