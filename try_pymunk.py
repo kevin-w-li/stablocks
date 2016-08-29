@@ -10,7 +10,8 @@ import numpy as np
 from interval import interval
 import copy
 import multiprocessing
-visual = False
+visual = True
+parallel = False
 import functools
 
 if visual:
@@ -214,14 +215,18 @@ def apply_noise_part_B(position_var, num_of_blocks, noise_trials, arg_index):
 def apply_noise_part_B_star(position_var, num_of_blocks, noise_trials, arg_index):
     return apply_noise_part_B(position_var, num_of_blocks, noise_trials, arg_index)
 
-def apply_noise(block_arrangements_num=10, noise_trials = 20, num_of_blocks = 7, noise_var = 1., position_var=1):
+def apply_noise(block_arrangements_num=3, noise_trials = 3, num_of_blocks = 3, noise_var = 1., position_var=1):
     success_array = np.zeros([block_arrangements_num, noise_trials, num_of_blocks])
-    pool = multiprocessing.Pool(processes=4)
-    func = functools.partial(apply_noise_part_B_star, position_var, num_of_blocks, noise_trials)
-    m4 = pool.map(func, range(block_arrangements_num))
-    output_list = map(lambda x: x, m4)
-    for i in range(block_arrangements_num):
-        success_array[i] = output_list[i]
+    if parallel:
+        pool = multiprocessing.Pool(processes=4)
+        func = functools.partial(apply_noise_part_B_star, position_var, num_of_blocks, noise_trials)
+        m4 = pool.map(func, range(block_arrangements_num))
+        output_list = map(lambda x: x[1], m4)
+        for i in range(block_arrangements_num):
+            success_array[i] = output_list[i]
+    else:
+        for i in range(block_arrangements_num):
+            success_array[i] = apply_noise_part_B(position_var, num_of_blocks, noise_trials, i)
     return success_array
 
 
