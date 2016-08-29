@@ -19,11 +19,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.cbook as cbook
 import time
-from scipy.misc import imread
-from scipy.misc import imresize
-import matplotlib.image as mpimg
-from scipy.ndimage import filters
-import urllib
+#from scipy.misc import imread
+#from scipy.misc import imresize
+#import matplotlib.image as mpimg
+#from scipy.ndimage import filters
+#import urllib
 from numpy import random
 import h5py
 import tensorflow as tf
@@ -38,10 +38,10 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_integer('image_dim', 227, 'first dimension of the image; we are assuming a square image')
 flags.DEFINE_integer('color_channel', 3, 'number of color channels')
-flags.DEFINE_integer('num_gridlines', 100, 'number of grid lines')
-flags.DEFINE_integer('num_minibatches', 100, 'number of minibatches')
-flags.DEFINE_integer('num_images', 500, 'number of minibatches')
-flags.DEFINE_string('exp_name', 'deconv_1000_5', 'some informative name for the experiment')
+flags.DEFINE_integer('num_gridlines', 50, 'number of grid lines')
+flags.DEFINE_integer('num_minibatches', 500, 'number of minibatches')
+flags.DEFINE_integer('num_images', 10000, 'number of images')
+flags.DEFINE_string('exp_name', 'heatmap_10000_5_5_227_50', 'some informative name for the experiment')
 
 ################################################################################
 
@@ -199,32 +199,30 @@ def Alexify_data(input_shape=[None, FLAGS.image_dim, FLAGS.image_dim, FLAGS.colo
     return {'fc7': fc7, 'x':x}
 
 def Alexnet(input_shape=[None, 4096], input_image_shape =[None, FLAGS.image_dim, FLAGS.image_dim, FLAGS.color_channel],
-            output_shape=[None, FLAGS.num_gridlines]):
+            output_shape=[None, FLAGS.num_gridlines, FLAGS.num_gridlines, 1]):
 
     x = tf.placeholder(tf.float32, input_shape)
     y = tf.placeholder(tf.float32, output_shape)
     x_image = tf.placeholder(tf.float32, input_image_shape)
 
-    W_regression = weight_variable([4096, 64 * 64])
-    b_regression = bias_variable([64 * 64])
+    W_regression = weight_variable([4096, 55 * 55])
+    b_regression = bias_variable([55 * 55])
     h_regression = tf.nn.relu(tf.matmul(x, W_regression) + b_regression)
 
-    W2_regression = weight_variable([64 * 64, 227 * 227])
-    b2_regression = bias_variable([227 * 227])
+    W2_regression = weight_variable([55 * 55, 50 * 50])
+    b2_regression = bias_variable([50 * 50])
     h2_regression = tf.nn.sigmoid(tf.matmul(h_regression, W2_regression) + b2_regression)
 
-    target_resized = x_image
-    target_grayscaled = (tf.image.rgb_to_grayscale(target_resized) / 255.)
-    temp_dist = tf.sub(target_grayscaled, tf.reshape(h2_regression, [-1, 227, 227, 1]))
+    #target_grayscaled = (tf.image.rgb_to_grayscale(target_resized) / 255.)
+    temp_dist = tf.sub(y, tf.reshape(h2_regression, [-1, 50, 50, 1]))
     SE = tf.nn.l2_loss(temp_dist)
     MSE = tf.reduce_mean(SE, name='mse')
     return {'cost': MSE, 'y_output': y, 'x_input': x, 'x_input_image': x_image,
-        'y': tf.reshape(h2_regression, [-1, 227, 227, 1]),
-            'grayscale': target_grayscaled}
+        'y_pred': tf.reshape(h2_regression, [-1, 50, 50, 1]),}
 
 
 def test_DNN_pretrained():
-    hdf_file = h5py.File('../data/debug_dataset_5_3_10.hdf5', 'r')
+    hdf_file = h5py.File('../data/dataset_10000_5_5_227_50.hdf5', 'r')
     images = hdf_file.get('data')
     labels = hdf_file.get('label')
     num_images = images.shape[0]
@@ -237,17 +235,17 @@ def test_DNN_pretrained():
         print batch_i
         images_fc7[batch_i, :, :] = sess.run(alx['fc7'], feed_dict={alx['x']:images[batch_i, :, :, :, :]})
 
-    alx_hdf_file = h5py.File('../data/alx_debug_dataset_5_3_10.hdf5', 'w')
+    alx_hdf_file = h5py.File('../data/alx_dataset_10000_5_5_227_50.hdf5', 'w')
     alx_hdf_file.create_dataset('data', data=images_fc7)
-    hdf_file = h5py.File('../data/alx_debug_dataset_5_3_10.hdf5', 'r')
+    hdf_file = h5py.File('../data/alx_dataset_10000_5_5_227_50.hdf5', 'r')
     images_fc7 = hdf_file.get('data')
-
-    x_train = images_fc7[:90]
-    x_train_images = images[:90]
-    y_train = labels[:90]
-    x_test = images_fc7[90:]
-    x_test_images = images[90:]
-    y_test = labels[90:]
+    train_size = 400
+    x_train = images_fc7[:train_size]
+    x_train_images = images[:train_size]
+    y_train = labels[:train_size]
+    x_test = images_fc7[train_size:]
+    x_test_images = images[train_size:]
+    y_test = labels[train_size:]
 #check why the blue area doesn't get blue '
     cnn = Alexnet()
     n_epochs = 400
@@ -300,10 +298,10 @@ def test_DNN_pretrained():
                                                             cnn['x_input']: batch_X_input,
                                                              cnn['x_input_image']: batch_X_input_images})[0]
             true_mat = batch_y_output
-            pred_mat = sess.run([cnn['y']][0], feed_dict={cnn['y_output']: batch_y_output,
+            pred_mat = sess.run([cnn['y_pred']][0], feed_dict={cnn['y_output']: batch_y_output,
                                                          cnn['x_input']: batch_X_input,
                                                          cnn['x_input_image']: batch_X_input_images} )[0]
-            target = sess.run(cnn['grayscale'], feed_dict = {cnn['y_output']: batch_y_output, cnn['x_input']: batch_X_input,
+            target = sess.run(cnn['y_output'], feed_dict = {cnn['y_output']: batch_y_output, cnn['x_input']: batch_X_input,
                                                              cnn['x_input_image']: batch_X_input_images})[0]
 
         fig0, axes0 = plt.subplots(1, 2, squeeze=False, figsize=(10, 5))
