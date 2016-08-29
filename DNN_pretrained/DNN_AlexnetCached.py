@@ -68,14 +68,8 @@ def conv(input, kernel, biases, k_h, k_w, c_o, s_h, s_w, padding="VALID", group=
 def conv2d(x, W):
   return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
 
-
-def Alexnet(input_shape=[None, FLAGS.image_dim, FLAGS.image_dim, FLAGS.color_channel],
-            output_shape=[None, FLAGS.num_gridlines]):
-
-
+def Alexify_data(input_shape=[None, FLAGS.image_dim, FLAGS.image_dim, FLAGS.color_channel]):
     x = tf.placeholder(tf.float32, input_shape)
-    y = tf.placeholder(tf.float32, output_shape)
-
     # conv1
     # conv(11, 11, 96, 4, 4, padding='VALID', name='conv1')
     k_h = 11;
@@ -202,65 +196,30 @@ def Alexnet(input_shape=[None, FLAGS.image_dim, FLAGS.image_dim, FLAGS.color_cha
     fc7W = tf.constant(net_data["fc7"][0])
     fc7b = tf.constant(net_data["fc7"][1])
     fc7 = tf.nn.relu_layer(fc6, fc7W, fc7b)
+    return {'fc7': fc7, 'x':x}
+
+def Alexnet(input_shape=[None, 4096], input_image_shape =[None, FLAGS.image_dim, FLAGS.image_dim, FLAGS.color_channel],
+            output_shape=[None, FLAGS.num_gridlines]):
+
+    x = tf.placeholder(tf.float32, input_shape)
+    y = tf.placeholder(tf.float32, output_shape)
+    x_image = tf.placeholder(tf.float32, input_image_shape)
 
     W_regression = weight_variable([4096, 64 * 64])
     b_regression = bias_variable([64 * 64])
-    h_regression = tf.nn.relu(tf.matmul(fc7, W_regression) + b_regression)
+    h_regression = tf.nn.relu(tf.matmul(x, W_regression) + b_regression)
 
     W2_regression = weight_variable([64 * 64, 227 * 227])
     b2_regression = bias_variable([227 * 227])
     h2_regression = tf.nn.sigmoid(tf.matmul(h_regression, W2_regression) + b2_regression)
 
-    #
-    # temp_dist = tf.sub(y, h_regression)
-    # SE = tf.nn.l2_loss(temp_dist)
-    # MSE = tf.reduce_mean(SE, name='mse')
-    # return {'cost': MSE, 'y_output': y, 'x_input': x, 'y': h_regression}
-
-    # #####Deconvolution to the heatmap
-
-    # deconv000_weight = weight_variable([3, 3, 1, 1])
-    # convt_000 = tf.nn.relu(
-    #     tf.nn.conv2d_transpose(tf.reshape(h_regression, [-1, 8, 8, 1]),
-    #                            filter=deconv000_weight,
-    #                            output_shape=[FLAGS.num_images / (FLAGS.num_minibatches), 16, 16, 1],
-    #                            strides=[1, 2, 2, 1]))
-    #
-    # deconv00_weight = weight_variable([7, 7, 1, 1])
-    # convt_00 = tf.nn.relu(
-    #     tf.nn.conv2d_transpose(tf.reshape(h_regression, [-1, 16, 16, 1]),
-    #                            filter=deconv00_weight,
-    #                            output_shape=[FLAGS.num_images / (FLAGS.num_minibatches), 32, 32, 1],
-    #                            strides=[1, 2, 2, 1]))
-
-    # deconv0_weight = weight_variable([5, 5, 1, 1])
-    # convt_0 = tf.nn.relu(
-    #     tf.nn.conv2d_transpose(tf.reshape(h_regression, [-1, 32, 32, 1]),
-    #                            filter=deconv0_weight,
-    #                            output_shape=[FLAGS.num_images / (FLAGS.num_minibatches), 64, 64, 1],
-    #                            strides=[1, 2, 2, 1]))
-
-    # deconv1_weight = weight_variable([5, 5, 1, 1])
-    # convt_1 = tf.nn.relu(
-    #     tf.nn.conv2d_transpose(tf.reshape(h_regression, [-1, 64, 64, 1]),
-    #                            filter=deconv1_weight,
-    #                            output_shape=[FLAGS.num_images / (FLAGS.num_minibatches), 128, 128, 1],
-    #                            strides=[1, 2, 2, 1]))
-    #
-    # deconv2_weight = weight_variable([7, 7, 1, 1])
-    # convt_2 = tf.nn.sigmoid(
-    #     tf.nn.conv2d_transpose(convt_1,
-    #                            filter=deconv2_weight,
-    #                            output_shape=[FLAGS.num_images / (FLAGS.num_minibatches), FLAGS.image_dim + 29, FLAGS.image_dim + 29, 1],
-    #                            strides=[1, 2, 2, 1]))
-
-    target_resized = x  # tf.slice(x, [0, 0, 0, 0], [FLAGS.num_images / (FLAGS.num_minibatches), FLAGS.image_dim - 1, FLAGS.image_dim - 1, 1])
-    # target_resized = tf.pad(target_resized, [[0, 0], [15, 15], [15, 15], [0,0]], "CONSTANT")
+    target_resized = x_image
     target_grayscaled = (tf.image.rgb_to_grayscale(target_resized) / 255.)
     temp_dist = tf.sub(target_grayscaled, tf.reshape(h2_regression, [-1, 227, 227, 1]))
     SE = tf.nn.l2_loss(temp_dist)
     MSE = tf.reduce_mean(SE, name='mse')
-    return {'cost': MSE, 'y_output': y, 'x_input': x, 'y': tf.reshape(h2_regression, [-1, 227, 227, 1]),
+    return {'cost': MSE, 'y_output': y, 'x_input': x, 'x_input_image': x_image,
+        'y': tf.reshape(h2_regression, [-1, 227, 227, 1]),
             'grayscale': target_grayscaled}
 
 
@@ -269,11 +228,25 @@ def test_DNN_pretrained():
     images = hdf_file.get('data')
     labels = hdf_file.get('label')
     num_images = images.shape[0]
-    images = np.reshape(images, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.image_dim, FLAGS.image_dim, FLAGS.color_channel))
+    images = np.reshape(images, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.image_dim, FLAGS.image_dim,FLAGS.color_channel))
     labels = np.reshape(labels, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.num_gridlines))
-    x_train = images[:90]
+    sess = tf.Session()
+    alx = Alexify_data()
+    images_fc7 = np.zeros((FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), 4096))
+    for batch_i in (range(images.shape[0])):
+        print batch_i
+        images_fc7[batch_i, :, :] = sess.run(alx['fc7'], feed_dict={alx['x']:images[batch_i, :, :, :, :]})
+
+    alx_hdf_file = h5py.File('../data/alx_debug_dataset_5_3_10.hdf5', 'w')
+    alx_hdf_file.create_dataset('data', data=images_fc7)
+    hdf_file = h5py.File('../data/alx_debug_dataset_5_3_10.hdf5', 'r')
+    images_fc7 = hdf_file.get('data')
+
+    x_train = images_fc7[:90]
+    x_train_images = images[:90]
     y_train = labels[:90]
-    x_test = images[90:]
+    x_test = images_fc7[90:]
+    x_test_images = images[90:]
     y_test = labels[90:]
 #check why the blue area doesn't get blue '
     cnn = Alexnet()
@@ -289,7 +262,7 @@ def test_DNN_pretrained():
         os.makedirs('logs/' + FLAGS.exp_name)
 
     init = tf.initialize_all_variables()
-    sess = tf.Session()
+
     sess.run(init)
     for epoch_i in range(n_epochs):
         print('--- Epoch', epoch_i)
@@ -298,9 +271,10 @@ def test_DNN_pretrained():
             tic = time.time()
             print batch_i
             batch_y_output = y_train[batch_i, :, :]
-            batch_X_input = x_train[batch_i, :, :, :, :]
+            batch_X_input = x_train[batch_i, :, :]
             temp = sess.run([cnn['cost'], optimizer],
-                            feed_dict={cnn['y_output']: batch_y_output, cnn['x_input']: batch_X_input})[0]
+                            feed_dict={cnn['y_output']: batch_y_output, cnn['x_input']: batch_X_input,
+                                       cnn['x_input_image']: x_train_images[batch_i, :, :, :, :]})[0]
             # if batch_i == 1:
             #     saver = tf.train.Saver()
             #     saver.save(sess, 'logs/' + FLAGS.exp_name + '/', global_step=0)
@@ -320,13 +294,17 @@ def test_DNN_pretrained():
         valid_cost = 0
         for batch_i in range(y_test.shape[0]):
             batch_y_output = y_test[batch_i, :, :]
-            batch_X_input = x_test[batch_i, :, :, :, :]
+            batch_X_input = x_test[batch_i, :, :]
+            batch_X_input_images = x_test_images[batch_i, :, :, :, :]
             valid_cost += sess.run([cnn['cost']], feed_dict={cnn['y_output']: batch_y_output,
-                                                            cnn['x_input']: batch_X_input})[0]
+                                                            cnn['x_input']: batch_X_input,
+                                                             cnn['x_input_image']: batch_X_input_images})[0]
             true_mat = batch_y_output
             pred_mat = sess.run([cnn['y']][0], feed_dict={cnn['y_output']: batch_y_output,
-                                                         cnn['x_input']: batch_X_input})[0]
-            target = sess.run(cnn['grayscale'], feed_dict = {cnn['y_output']: batch_y_output, cnn['x_input']: batch_X_input})[0]
+                                                         cnn['x_input']: batch_X_input,
+                                                         cnn['x_input_image']: batch_X_input_images} )[0]
+            target = sess.run(cnn['grayscale'], feed_dict = {cnn['y_output']: batch_y_output, cnn['x_input']: batch_X_input,
+                                                             cnn['x_input_image']: batch_X_input_images})[0]
 
         fig0, axes0 = plt.subplots(1, 2, squeeze=False, figsize=(10, 5))
         axes0[0][0].imshow(target.squeeze(), aspect='auto', interpolation="nearest", vmin=0, vmax=1)

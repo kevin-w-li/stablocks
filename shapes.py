@@ -58,6 +58,7 @@ def make_pile_given_noise(space=None, base_coord = [(0., 100.), (600., 100.)], b
         last_block_width = perm_block_dim[0]
         body_list.append(body)
         shape_list.append(shape)
+    print space.shapes
     return body_list, shape_list
 
 
@@ -95,7 +96,7 @@ def add_base(space, p1, p2, width = 5):
     space.add(shape)
     shape.friction = 1000.0
     shape.elasticity = 0.0
-    return shape
+    return body, shape
 
 def sort_pile(blocks):
     blocks.sort(key = lambda x: x.body.position[1], reverse = False)
