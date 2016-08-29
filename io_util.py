@@ -35,6 +35,7 @@ def space_label_to_array(space,label, display_size, image_size, fig, ax, plt_opt
         center = tuple(np.mean(p.get_xy()[0:4],0).astype(int))
         if center not in label: continue # the base does not have lables
         p.set_facecolor(np.tile([label[center]], 3))
+	p.set_edgecolor([1.0,1.0,1.0])
             
     buf = io.BytesIO()
     fig.savefig(buf, format='png', bbox_inches=extent)

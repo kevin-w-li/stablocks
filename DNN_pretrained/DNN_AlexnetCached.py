@@ -39,9 +39,9 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('image_dim', 227, 'first dimension of the image; we are assuming a square image')
 flags.DEFINE_integer('color_channel', 3, 'number of color channels')
 flags.DEFINE_integer('num_gridlines', 50, 'number of grid lines')
-flags.DEFINE_integer('num_minibatches', 500, 'number of minibatches')
-flags.DEFINE_integer('num_images', 10000, 'number of images')
-flags.DEFINE_string('exp_name', 'heatmap_10000_5_5_227_50', 'some informative name for the experiment')
+flags.DEFINE_integer('num_minibatches', 1000, 'number of minibatches')
+flags.DEFINE_integer('num_images', 50000, 'number of images')
+flags.DEFINE_string('exp_name', 'heatmap_dataset_50000_5_5_227_50', 'some informative name for the experiment')
 
 ################################################################################
 
@@ -218,16 +218,17 @@ def Alexnet(input_shape=[None, 4096], input_image_shape =[None, FLAGS.image_dim,
     SE = tf.nn.l2_loss(temp_dist)
     MSE = tf.reduce_mean(SE, name='mse')
     return {'cost': MSE, 'y_output': y, 'x_input': x, 'x_input_image': x_image,
-        'y_pred': tf.reshape(h2_regression, [-1, 50, 50, 1]),}
+        'y_pred': tf.reshape(h2_regression, [-1, 50, 50, 1]), 'y_output_dummy':y}
 
 
 def test_DNN_pretrained():
-    hdf_file = h5py.File('../data/dataset_10000_5_5_227_50.hdf5', 'r')
+    hdf_file = h5py.File('../data/dataset_50000_5_5_227_50.hdf5', 'r')
     images = hdf_file.get('data')
-    labels = hdf_file.get('label')
+    labels = hdf_file.get('label')[:,:, :, 0]/255.
     num_images = images.shape[0]
+    #print(labels)
     images = np.reshape(images, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.image_dim, FLAGS.image_dim,FLAGS.color_channel))
-    labels = np.reshape(labels, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.num_gridlines))
+    labels = np.reshape(labels, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.num_gridlines, FLAGS.num_gridlines, 1))
     sess = tf.Session()
     alx = Alexify_data()
     images_fc7 = np.zeros((FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), 4096))
@@ -235,11 +236,11 @@ def test_DNN_pretrained():
         print batch_i
         images_fc7[batch_i, :, :] = sess.run(alx['fc7'], feed_dict={alx['x']:images[batch_i, :, :, :, :]})
 
-    alx_hdf_file = h5py.File('../data/alx_dataset_10000_5_5_227_50.hdf5', 'w')
+    alx_hdf_file = h5py.File('../data/alx_dataset_50000_5_5_227_50.hdf5', 'w')
     alx_hdf_file.create_dataset('data', data=images_fc7)
-    hdf_file = h5py.File('../data/alx_dataset_10000_5_5_227_50.hdf5', 'r')
+    hdf_file = h5py.File('../data/alx_dataset_50000_5_5_227_50.hdf5', 'r')
     images_fc7 = hdf_file.get('data')
-    train_size = 400
+    train_size = 900
     x_train = images_fc7[:train_size]
     x_train_images = images[:train_size]
     y_train = labels[:train_size]
@@ -273,9 +274,9 @@ def test_DNN_pretrained():
             temp = sess.run([cnn['cost'], optimizer],
                             feed_dict={cnn['y_output']: batch_y_output, cnn['x_input']: batch_X_input,
                                        cnn['x_input_image']: x_train_images[batch_i, :, :, :, :]})[0]
-            # if batch_i == 1:
-            #     saver = tf.train.Saver()
-            #     saver.save(sess, 'logs/' + FLAGS.exp_name + '/', global_step=0)
+            if batch_i == 1:
+                 saver = tf.train.Saver()
+                 saver.save(sess, 'logs/' + FLAGS.exp_name + '/', global_step=0)
 
 
             print 'Minibatch cost: ', temp
@@ -291,23 +292,25 @@ def test_DNN_pretrained():
         #################################### Testing ########################################
         valid_cost = 0
         for batch_i in range(y_test.shape[0]):
-            batch_y_output = y_test[batch_i, :, :]
+            batch_y_output = y_test[batch_i, :, :, :, :]
+	    #print(batch_X_input.shape)
             batch_X_input = x_test[batch_i, :, :]
             batch_X_input_images = x_test_images[batch_i, :, :, :, :]
             valid_cost += sess.run([cnn['cost']], feed_dict={cnn['y_output']: batch_y_output,
                                                             cnn['x_input']: batch_X_input,
                                                              cnn['x_input_image']: batch_X_input_images})[0]
-            true_mat = batch_y_output
+            target = batch_y_output
             pred_mat = sess.run([cnn['y_pred']][0], feed_dict={cnn['y_output']: batch_y_output,
                                                          cnn['x_input']: batch_X_input,
                                                          cnn['x_input_image']: batch_X_input_images} )[0]
-            target = sess.run(cnn['y_output'], feed_dict = {cnn['y_output']: batch_y_output, cnn['x_input']: batch_X_input,
-                                                             cnn['x_input_image']: batch_X_input_images})[0]
+            #target = sess.run(cnn['y_output_dummy'], feed_dict = {cnn['y_output']: batch_y_output, cnn['x_input']: batch_X_input,
+            #                                                 cnn['x_input_image']: batch_X_input_images})[0]
 
         fig0, axes0 = plt.subplots(1, 2, squeeze=False, figsize=(10, 5))
-        axes0[0][0].imshow(target.squeeze(), aspect='auto', interpolation="nearest", vmin=0, vmax=1)
+        axes0[0][0].imshow(target.squeeze()[0], aspect='auto', interpolation="nearest", vmin=0, vmax=1)
         #axes0[0][0].set_xticks(range(11))
         axes0[0][0].set_title('True probs')
+	#print(pred_mat.shape)
         axes0[0][1].imshow(pred_mat.squeeze(), aspect='auto', interpolation="nearest", vmin=0, vmax=1)
         #axes0[0][1].set_xticks(range(11))
         axes0[0][1].set_title('Pred probs')

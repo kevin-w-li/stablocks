@@ -1,5 +1,5 @@
 import matplotlib as mpl
-# mpl.use('Agg')
+mpl.use('Agg')
 import sys, io
 import pygame
 from matplotlib import pyplot as plt
@@ -21,7 +21,7 @@ my_dpi = 96
 block_size = 50
 base_width = 5
 num_blocks = 5
-num_piles = 10
+num_piles = 50000
 num_slices = 100
 recog_noise = 5
 plt.rcParams['image.cmap'] = 'gray'
@@ -41,6 +41,7 @@ ax.set(adjustable='box-forced', aspect=1, xlim=(0,display_size), ylim=(0, displa
 ax.set_axis_off()
 
 def get_one(i):
+    print 'generating ', i 
     space = pymunk.Space()
     map(lambda p: p.remove(), filter(lambda c: isinstance(c, mpl.patches.Polygon), ax.get_children()))
     blocks = make_pile(space, num_of_blocks = num_blocks, base_coord = [(0., 5.), (display_size, 5.)], base_width = base_width,  block_dim = [block_size, block_size/2], noise = 0.35)
@@ -55,7 +56,7 @@ def get_one(i):
     # print (ax.get_children())
     return (data, labeled_data, slice_vec, block_labels)
 
-pool = multiprocessing.Pool(4)
+pool = multiprocessing.Pool(8)
 all_data_slices = pool.map(get_one, range(num_piles))
 all_data = np.array(map(lambda l:l[0], all_data_slices))
 all_labeled_data = np.array(map(lambda l:l[1], all_data_slices))
@@ -68,8 +69,8 @@ filename = '_'.join(('data/dataset', str(num_piles), str(num_blocks), str(recog_
 filename = filename + '.hdf5'
 f = h5py.File(filename, 'w')
 f.create_dataset('data', data = all_data)
-f.create_dataset('slices', data = all_data)
-f.create_dataset('label', data = all_slices)
+f.create_dataset('slices', data = all_slices)
+f.create_dataset('label', data = all_labeled_data)
 f.close()
 plot_many_piles_slices(all_data, all_labeled_data,all_slices)
 
