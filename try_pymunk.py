@@ -27,7 +27,8 @@ from pymunk import pygame_util
 # base = add_base(space, (0,100), (500,100))
 
 def pile_stability_w_noise(num_of_blocks=7, noise_trials=5, block_arrangements_num=3, var=1.):
-    for i in range(block_arrangements_num):
+    """ Deprecated NOT IN USE!!!"""
+
         position_noise_list = truncnorm.rvs(- 1. / (var), 1. / (var), size=num_of_blocks)
         hor_ver_list = np.random.binomial(2, 0.5, num_of_blocks)
         for j in range(num_of_blocks):
