@@ -9,8 +9,9 @@ import time
 import numpy as np
 from interval import interval
 import copy
-
+import multiprocessing
 visual = False
+import functools
 
 if visual:
     pygame.init()
@@ -111,7 +112,7 @@ def rain_maker(num_of_blocks=20, block_dim = [100,40], var=1.,  base_coord = [(0
                 elif event.type == KEYDOWN and event.key == K_ESCAPE:
                     sys.exit(0)
 
-def smart_rain_maker(space, num_of_blocks=20, block_dim=[100, 40], block_arrangements_num=10, var=1.,
+def smart_rain_maker(space, num_of_blocks=5, block_dim=[100, 40], block_arrangements_num=3, var=1.,
                base_coord=[(0., 100.), (600., 100.)], base_width=10, mass=0.01, position_noise_list=None, hor_ver_list = None):
     if position_noise_list is None:
         position_noise_list = truncnorm.rvs(- 1. / (var), 1. / (var), size=num_of_blocks)
@@ -173,50 +174,58 @@ def smart_rain_maker(space, num_of_blocks=20, block_dim=[100, 40], block_arrange
 
     return body_list, shape_list
                 # body.body_type = pymunk.Body.STATIC
-def apply_noise(block_arrangements_num=20, noise_trials = 10, num_of_blocks = 7, noise_var = 1., position_var=1):
+
+
+def apply_noise_part_B(position_var, num_of_blocks, noise_trials, arg_index):
+    """ Parallel fucntion to be called"""
     space = pymunk.Space()
     space.gravity = (0.0, 0.0)
-    success_array = np.zeros([block_arrangements_num, noise_trials, num_of_blocks])
-    for i in range(block_arrangements_num):
-        position_noise_list = truncnorm.rvs(- 1. / (position_var), 1. / (position_var), size=num_of_blocks)
-        hor_ver_list = np.random.binomial(2, 0.5, num_of_blocks)
-        for j in range(num_of_blocks):
-            for k in range(noise_trials):
-                body_list, shape_list = smart_rain_maker(space, position_noise_list=position_noise_list, hor_ver_list=hor_ver_list,
+    position_noise_list = truncnorm.rvs(- 1. / (position_var), 1. / (position_var), size=num_of_blocks)
+    hor_ver_list = np.random.binomial(2, 0.5, num_of_blocks)
+    temp_array = np.zeros([noise_trials, num_of_blocks])
+    for j in range(num_of_blocks):
+        for k in range(noise_trials):
+            body_list, shape_list = smart_rain_maker(space, position_noise_list=position_noise_list,
+                                                     hor_ver_list=hor_ver_list,
                                                      num_of_blocks=num_of_blocks, block_dim=[100, 40], var=1.,
                                                      base_coord=[(0., 100.), (600., 100.)], base_width=10, mass=1)
-                moving_noise = truncnorm.rvs(-1./10., 1./10.,size=1 ) * (shape_list[1].bb.right - shape_list[1].bb.left)
-                body_list[j].position = [body_list[j].position[0] + moving_noise, body_list[j].position[1]]
-                space.reindex_shapes_for_body(body_list[j])
-                space.gravity = (0.0, -900)
-                space.step(1/50.)
-                for block in body_list:
-                    if block.angular_velocity > 0.01:
-                        success_array[i,k,j] = 1.
-                # print "block, trial, arrangement", j, k, i,success_array[i,k,j]
-                for l in range(1, len(body_list)):
-                    space.remove(body_list[l])
-                    space.remove(shape_list[l])
-                space.gravity = (0.0, 0.0)
-                if visual:
-                    screen.fill((255, 255, 255))
-                    # space.debug_draw(draw_options)
-                    clock.tick(50)
-                    pygame.display.flip()
-                space.step(1 / 50.0)
+            moving_noise = truncnorm.rvs(-1. / 10., 1. / 10., size=1) * (
+                shape_list[1].bb.right - shape_list[1].bb.left)
+            body_list[j].position = [body_list[j].position[0] + moving_noise, body_list[j].position[1]]
+            space.reindex_shapes_for_body(body_list[j])
+            space.gravity = (0.0, -900)
+            space.step(1 / 50.)
+
+            for block in body_list:
+                if block.angular_velocity > 0.01:
+                    temp_array[k, j] = 1.
+            for l in range(1, len(body_list)):
+                space.remove(body_list[l])
+                space.remove(shape_list[l])
+            space.gravity = (0.0, 0.0)
+            if visual:
+                screen.fill((255, 255, 255))
+                # space.debug_draw(draw_options)
+                clock.tick(50)
+                pygame.display.flip()
+            space.step(1 / 50.0)
+    return temp_array
+
+def apply_noise_part_B_star(position_var, num_of_blocks, noise_trials, arg_index):
+    return apply_noise_part_B(position_var, num_of_blocks, noise_trials, arg_index)
+
+def apply_noise(block_arrangements_num=10, noise_trials = 20, num_of_blocks = 7, noise_var = 1., position_var=1):
+    success_array = np.zeros([block_arrangements_num, noise_trials, num_of_blocks])
+    pool = multiprocessing.Pool(processes=4)
+    func = functools.partial(apply_noise_part_B_star, position_var, num_of_blocks, noise_trials)
+    m4 = pool.map(func, range(block_arrangements_num))
+    output_list = map(lambda x: x, m4)
+    for i in range(block_arrangements_num):
+        success_array[i] = output_list[i]
     return success_array
-    while (True):
-        # just for stopping the code from running
-        for event in pygame.event.get():
-            if event.type == QUIT:
-                sys.exit(0)
-            elif event.type == KEYDOWN and event.key == K_ESCAPE:
-                sys.exit(0)
+
 
 print apply_noise()
-# while True:
-#      pile_stability_w_noise(num_of_blocks=7, noise_trials=5, block_arrangements_num=3, var=1)
-# while True:
 
 
 
