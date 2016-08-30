@@ -41,7 +41,9 @@ flags.DEFINE_integer('color_channel', 3, 'number of color channels')
 flags.DEFINE_integer('num_gridlines', 50, 'number of grid lines')
 flags.DEFINE_integer('num_minibatches', 1000, 'number of minibatches')
 flags.DEFINE_integer('num_images', 50000, 'number of images')
-flags.DEFINE_string('exp_name', 'heatmap_dataset_50000_5_5_227_50_copy', 'some informative name for the experiment')
+flags.DEFINE_integer('train_size', 900, 'number of images')
+flags.DEFINE_string('data_file', '../data/dataset_50000_5_5_227_50.hdf5', 'path to data file')
+flags.DEFINE_string('exp_name', 'heatmap_dataset_50000_5_5_227_50_copy', 'used for finding the model of the run experiment')
 
 ################################################################################
 
@@ -223,7 +225,7 @@ def Alexnet(input_shape=[None, 4096], input_image_shape =[None, FLAGS.image_dim,
 
 def test_DNN_pretrained():
     aevb_model = 'logs/'+ FLAGS.exp_name + '/-0'
-    hdf_file = h5py.File('../data/dataset_50000_5_5_227_50.hdf5', 'r')
+    hdf_file = h5py.File(FLAGS.data_file, 'r')
     images = hdf_file.get('data')
     labels = hdf_file.get('label')[:,:, :, 0]/255.
     num_images = images.shape[0]
@@ -236,9 +238,9 @@ def test_DNN_pretrained():
     saver = tf.train.Saver()
     print('here')
     saver.restore(sess, aevb_model)
-    hdf_file = h5py.File('../data/alx_dataset_50000_5_5_227_50.hdf5', 'r')
+    hdf_file = h5py.File('../data/alx_'+FLAGS.data_file, 'r')
     images_fc7 = hdf_file.get('data')
-    train_size = 900
+    train_size = FLAGS.train_size
 
     x_test = images_fc7[train_size:]
     x_test_images = images[train_size:]
@@ -247,8 +249,8 @@ def test_DNN_pretrained():
 
     if not os.path.exists('logs/' + FLAGS.exp_name):
         os.makedirs('logs/' + FLAGS.exp_name)
-    if not os.path.exists('logs/' + FLAGS.exp_name + '/plots'):
-        os.makedirs('logs/' + FLAGS.exp_name + '/plots')
+    if not os.path.exists('logs/' + FLAGS.exp_name + '/plots_runner_test'):
+        os.makedirs('logs/' + FLAGS.exp_name + '/plots_runner_test')
 
     # init = tf.initialize_all_variables()
     #
@@ -270,7 +272,7 @@ def test_DNN_pretrained():
         axes0[0][0].set_title('True probs')
         axes0[0][1].imshow(pred_mat.squeeze(), aspect='auto', interpolation="nearest", vmin=0, vmax=1)
         axes0[0][1].set_title('Pred probs')
-        plt.savefig('logs/' + FLAGS.exp_name + '/plots/prob_mat_'+str(batch_i)+'.png', bbox_inches='tight')
+        plt.savefig('logs/' + FLAGS.exp_name + '/plots_runner_test/prob_mat_'+str(batch_i)+'.png', bbox_inches='tight')
 
 
 
