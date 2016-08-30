@@ -41,7 +41,9 @@ flags.DEFINE_integer('color_channel', 3, 'number of color channels')
 flags.DEFINE_integer('num_gridlines', 50, 'number of grid lines')
 flags.DEFINE_integer('num_minibatches', 1000, 'number of minibatches')
 flags.DEFINE_integer('num_images', 50000, 'number of images')
+flags.DEFINE_integer('train_size', 900, 'number of images')
 flags.DEFINE_string('exp_name', 'heatmap_dataset_50000_5_5_227_50', 'some informative name for the experiment')
+flags.DEFINE_string('data_file', '../data/dataset_50000_5_5_227_50.hdf5', 'path to data file')
 
 ################################################################################
 
@@ -222,7 +224,7 @@ def Alexnet(input_shape=[None, 4096], input_image_shape =[None, FLAGS.image_dim,
 
 
 def test_DNN_pretrained():
-    hdf_file = h5py.File('../data/dataset_50000_5_5_227_50.hdf5', 'r')
+    hdf_file = h5py.File(FLAGS.data_file, 'r')
     images = hdf_file.get('data')
     labels = hdf_file.get('label')[:,:, :, 0]/255.
     num_images = images.shape[0]
@@ -236,18 +238,18 @@ def test_DNN_pretrained():
         print batch_i
         images_fc7[batch_i, :, :] = sess.run(alx['fc7'], feed_dict={alx['x']:images[batch_i, :, :, :, :]})
 
-    alx_hdf_file = h5py.File('../data/alx_dataset_50000_5_5_227_50.hdf5', 'w')
+    alx_hdf_file = h5py.File('../data/alx_'+FLAGS.data_file, 'w')
     alx_hdf_file.create_dataset('data', data=images_fc7)
-    hdf_file = h5py.File('../data/alx_dataset_50000_5_5_227_50.hdf5', 'r')
+    hdf_file = h5py.File('../data/alx_'+FLAGS.data_file, 'r')
     images_fc7 = hdf_file.get('data')
-    train_size = 900
+    train_size = FLAGS.train_size
     x_train = images_fc7[:train_size]
     x_train_images = images[:train_size]
     y_train = labels[:train_size]
     x_test = images_fc7[train_size:]
     x_test_images = images[train_size:]
     y_test = labels[train_size:]
-#check why the blue area doesn't get blue '
+
     cnn = Alexnet()
     n_epochs = 400
     learning_rate = 0.001
@@ -259,6 +261,8 @@ def test_DNN_pretrained():
         pass
     if not os.path.exists('logs/' + FLAGS.exp_name):
         os.makedirs('logs/' + FLAGS.exp_name)
+    if not os.path.exists('logs/' + FLAGS.exp_name + '/plots'):
+        os.makedirs('logs/' + FLAGS.exp_name + '/plots')
 
     init = tf.initialize_all_variables()
 
@@ -293,7 +297,6 @@ def test_DNN_pretrained():
         valid_cost = 0
         for batch_i in range(y_test.shape[0]):
             batch_y_output = y_test[batch_i, :, :, :, :]
-	    #print(batch_X_input.shape)
             batch_X_input = x_test[batch_i, :, :]
             batch_X_input_images = x_test_images[batch_i, :, :, :, :]
             valid_cost += sess.run([cnn['cost']], feed_dict={cnn['y_output']: batch_y_output,
@@ -303,19 +306,16 @@ def test_DNN_pretrained():
             pred_mat = sess.run([cnn['y_pred']][0], feed_dict={cnn['y_output']: batch_y_output,
                                                          cnn['x_input']: batch_X_input,
                                                          cnn['x_input_image']: batch_X_input_images} )[0]
-            #target = sess.run(cnn['y_output_dummy'], feed_dict = {cnn['y_output']: batch_y_output, cnn['x_input']: batch_X_input,
-            #                                                 cnn['x_input_image']: batch_X_input_images})[0]
 
-        fig0, axes0 = plt.subplots(1, 2, squeeze=False, figsize=(10, 5))
-        axes0[0][0].imshow(target.squeeze()[0], aspect='auto', interpolation="nearest", vmin=0, vmax=1)
-        #axes0[0][0].set_xticks(range(11))
-        axes0[0][0].set_title('True probs')
-	#print(pred_mat.shape)
-        axes0[0][1].imshow(pred_mat.squeeze(), aspect='auto', interpolation="nearest", vmin=0, vmax=1)
-        #axes0[0][1].set_xticks(range(11))
-        axes0[0][1].set_title('Pred probs')
-#        plt.colorbar()
-        plt.savefig('logs/' + FLAGS.exp_name + '/prob_mat.png', bbox_inches='tight')
+            fig0, axes0 = plt.subplots(1, 2, squeeze=False, figsize=(10, 5))
+            axes0[0][0].imshow(target.squeeze()[0], aspect='auto', interpolation="nearest", vmin=0, vmax=1)
+            #axes0[0][0].set_xticks(range(11))
+            axes0[0][0].set_title('True probs')
+            axes0[0][1].imshow(pred_mat.squeeze(), aspect='auto', interpolation="nearest", vmin=0, vmax=1)
+            #axes0[0][1].set_xticks(range(11))
+            axes0[0][1].set_title('Pred probs')
+    #        plt.colorbar()
+            plt.savefig('logs/' + FLAGS.exp_name + '/plots/prob_mat_' + str(batch_i) + '.png', bbox_inches='tight')
         print('Validation cost:', valid_cost / (y_test.shape[0]))
         text_file = open("logs/" + FLAGS.exp_name + "/test_costs.txt", "a")
         text_file.write(str(valid_cost / (y_test.shape[0])))
