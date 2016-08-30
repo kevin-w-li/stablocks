@@ -231,6 +231,7 @@ def test_DNN_pretrained():
     labels = np.reshape(labels, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.num_gridlines))
     sess = tf.Session()
     saver = tf.train.Saver()
+    print('here')
     saver.restore(sess, aevb_model)
     hdf_file = h5py.File('../data/alx_dataset_50000_5_5_227_50.hdf5', 'r')
     images_fc7 = hdf_file.get('data')
@@ -254,6 +255,7 @@ def test_DNN_pretrained():
 
     #################################### Testing ########################################
     for batch_i in range(y_test.shape[0]):
+	print(batch_i)
         batch_y_output = y_test[batch_i, :, :]
         batch_X_input = x_test[batch_i, :, :]
         batch_X_input_images = x_test_images[batch_i, :, :, :, :]
