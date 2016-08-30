@@ -222,14 +222,17 @@ def Alexnet(input_shape=[None, 4096], input_image_shape =[None, FLAGS.image_dim,
 
 
 def test_DNN_pretrained():
-    aevb_model = 'logs/'+ FLAGS.exp_name + '_copy/-0'
+    aevb_model = 'logs/'+ FLAGS.exp_name + '/-0'
     hdf_file = h5py.File('../data/dataset_50000_5_5_227_50.hdf5', 'r')
     images = hdf_file.get('data')
-    labels = hdf_file.get('label')
+    labels = hdf_file.get('label')[:,:, :, 0]/255.
     num_images = images.shape[0]
     images = np.reshape(images, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.image_dim, FLAGS.image_dim,FLAGS.color_channel))
     labels = np.reshape(labels, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.num_gridlines, FLAGS.num_gridlines, 1))
+    cnn = Alexnet()
     sess = tf.Session()
+    init = tf.initialize_all_variables()
+    sess.run(init)
     saver = tf.train.Saver()
     print('here')
     saver.restore(sess, aevb_model)
@@ -241,7 +244,6 @@ def test_DNN_pretrained():
     x_test_images = images[train_size:]
     y_test = labels[train_size:]
 
-    cnn = Alexnet()
 
     if not os.path.exists('logs/' + FLAGS.exp_name):
         os.makedirs('logs/' + FLAGS.exp_name)
