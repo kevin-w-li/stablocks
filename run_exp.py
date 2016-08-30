@@ -15,14 +15,15 @@ from io_util import *
 from time import strftime, sleep
 from collections import OrderedDict
 
-display_size = (1880,1000)
-# display_size = (1000,1000)
+display_size = (1920,1000)
 stable_color = [52,152,219]
 unstable_color = [250,0,0]
 pygame.init()
-screen = pygame.display.set_mode(display_size)
+screen = pygame.display.set_mode(display_size, HWSURFACE | DOUBLEBUF | RESIZABLE)
+pygame.transform.scale(screen, (1000,1000))
 
-dataset_name = "spaces50"
+dataset_name = "exp_5_5_3_space"
+import sys, io
 spaces,labels = load_space('exp/' + dataset_name)
 num_piles = len(spaces)
 responses= [None]*len(spaces)
@@ -77,7 +78,7 @@ def draw_blocks(screen, space, count):
     space.debug_draw(draw_options)
     display_text(count)
 
-background = pygame.Surface([1000,200])
+background = pygame.Surface([800,200])
 background = background.convert()
 
 def display_text(count):
@@ -158,3 +159,4 @@ while True:
         responses[count] = OrderedDict(zip(ys, [True]*num_blocks))
         count+=1
         pygame.time.wait(10)
+

@@ -21,7 +21,7 @@ my_dpi = 96
 block_size = 50
 base_width = 5
 num_blocks = 5
-num_piles = 10
+num_piles = 2
 num_slices = 100
 recog_noise = 5
 plt.rcParams['image.cmap'] = 'gray'
@@ -68,8 +68,8 @@ filename = '_'.join(('data/dataset', str(num_piles), str(num_blocks), str(recog_
 filename = filename + '.hdf5'
 f = h5py.File(filename, 'w')
 f.create_dataset('data', data = all_data)
-f.create_dataset('slices', data = all_data)
-f.create_dataset('label', data = all_slices)
+f.create_dataset('slices', data = all_slices)
+f.create_dataset('label', data = all_labeled_data)
 f.close()
 plot_many_piles_slices(all_data, all_labeled_data,all_slices)
 

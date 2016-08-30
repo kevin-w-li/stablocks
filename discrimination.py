@@ -69,13 +69,8 @@ def labels_to_level_strips(dims, plane_heights, labels, n):
         vec[i] = labels[ii]
     return vec
 
-def labels_to_block_mesh(dims, plane_heights, labels, n):
-    
-    lims = range(dims[0], dims[1]+1, (dims[1]-dims[0])/n)
 
-
-
-
-
-
+# ============
+# = Using simulation
+# ============
 

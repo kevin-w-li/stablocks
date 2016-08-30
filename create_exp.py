@@ -19,11 +19,11 @@ display_size = 1000
 image_size = 227
 my_dpi = 96
 block_size = 160
-base_width = 5
+base_width = 10
 num_blocks = 5
-num_piles = 50
+num_piles = 5
 num_slices = 100
-recog_noise = 10
+recog_noise = 3
 plt.rcParams['image.cmap'] = 'gray'
 #plt.rcParams['image.interpolation'] = 'none'
 assert(block_size * num_blocks < display_size)
@@ -46,7 +46,7 @@ ax.set_axis_off()
 def get_one(i):
     space = pymunk.Space()
     map(lambda p: p.remove(), filter(lambda c: isinstance(c, mpl.patches.Polygon), ax.get_children()))
-    blocks = make_pile(space, num_of_blocks = num_blocks, base_coord = [(0., 5.), (display_size, 5.)], base_width = base_width,  block_dim = [block_size, block_size/2], noise = 0.35)
+    blocks = make_pile(space, num_of_blocks = num_blocks, base_coord = [(0., 5.), (display_size, 5.)], base_width = base_width,  block_dim = [block_size, block_size/2], noise = 0.5)
 
     plane_heights, level_labels, det_level_labels = combined_center_of_mass(blocks, recog_noise = recog_noise)
     
@@ -68,7 +68,7 @@ all_classes = np.array([all(stable.values()) for stable in all_det_block_labels]
 all_spaces = np.array(map(lambda l:l[5], all_data_slices))
 
 print 'mean of class is ', np.mean(all_classes)
-filename = '_'.join(('data/exp_data', str(num_piles), str(num_blocks), str(recog_noise)))
+filename = '_'.join(('exp/exp', str(num_piles), str(num_blocks), str(recog_noise),'data'))
 filename = filename + '.hdf5'
 f = h5py.File(filename, 'w')
 f.create_dataset('data', data = all_data)
@@ -76,7 +76,7 @@ f.create_dataset('labeled_data', data = all_labeled_data)
 f.create_dataset('label', data = all_slices)
 f.create_dataset('class', data = all_classes)
 f.close()
-# plot_many_piles_slices(all_data, all_slices)
-save_space(all_spaces, all_det_block_labels, 'exp/spaces')
-loaded_spaces, all_det_block_labels = load_space('exp/spaces')
+save_space(all_spaces, all_det_block_labels, \
+    '_'.join(('exp/exp', str(num_piles), str(num_blocks), str(recog_noise), 'space')))
+plot_many_piles_slices(all_data, all_labeled_data,all_slices)
 
