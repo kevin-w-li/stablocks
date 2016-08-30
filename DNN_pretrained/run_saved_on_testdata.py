@@ -228,7 +228,7 @@ def test_DNN_pretrained():
     labels = hdf_file.get('label')
     num_images = images.shape[0]
     images = np.reshape(images, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.image_dim, FLAGS.image_dim,FLAGS.color_channel))
-    labels = np.reshape(labels, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.num_gridlines))
+    labels = np.reshape(labels, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.num_gridlines, FLAGS.num_gridlines, 1))
     sess = tf.Session()
     saver = tf.train.Saver()
     print('here')
@@ -255,18 +255,16 @@ def test_DNN_pretrained():
 
     #################################### Testing ########################################
     for batch_i in range(y_test.shape[0]):
-	print(batch_i)
-        batch_y_output = y_test[batch_i, :, :]
+        print(batch_i)
+        batch_y_output = y_test[batch_i, :, :, :, :]
         batch_X_input = x_test[batch_i, :, :]
         batch_X_input_images = x_test_images[batch_i, :, :, :, :]
         pred_mat = sess.run([cnn['y_pred']][0], feed_dict={cnn['y_output']: batch_y_output,
                                                      cnn['x_input']: batch_X_input,
                                                      cnn['x_input_image']: batch_X_input_images} )[0]
-        target = sess.run(cnn['y_output'], feed_dict = {cnn['y_output']: batch_y_output, cnn['x_input']: batch_X_input,
-                                                         cnn['x_input_image']: batch_X_input_images})[0]
-
+        target = batch_y_output
         fig0, axes0 = plt.subplots(1, 2, squeeze=False, figsize=(10, 5))
-        axes0[0][0].imshow(target.squeeze(), aspect='auto', interpolation="nearest", vmin=0, vmax=1)
+        axes0[0][0].imshow(target.squeeze()[0], aspect='auto', interpolation="nearest", vmin=0, vmax=1)
         axes0[0][0].set_title('True probs')
         axes0[0][1].imshow(pred_mat.squeeze(), aspect='auto', interpolation="nearest", vmin=0, vmax=1)
         axes0[0][1].set_title('Pred probs')
