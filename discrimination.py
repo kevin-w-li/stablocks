@@ -3,7 +3,8 @@ import bisect
 from scipy.stats import norm 
 import numpy as np
 from collections import OrderedDict
-
+from copy import deepcopy
+from shapes import sort_pile
 
 def combined_center_of_mass(blocks, n_above = 1000, recog_noise = 1.0):
     nblocks = len(blocks)-1
@@ -26,6 +27,49 @@ def combined_center_of_mass(blocks, n_above = 1000, recog_noise = 1.0):
                      norm.cdf(-0.5 * plane_lengths[bi], xcom, recog_noise)
 
     return plane_heights, labels, labels_det
+
+def reset_space(space, pos):
+    blocks = sort_pile(space.shapes)
+    for bi, b in enumerate(blocks[1:]):
+        b.body._set_position(tuple(pos[bi]))
+        b.body._set_angle(0.0)
+        b.body._set_velocity([0.0,0.0])
+        b.body._set_angular_velocity(0.0)
+        b.body._set_force([0.0,0.0])
+        space.reindex_shapes_for_body(b.body)
+    return space
+
+def simulate_whole(space, recog_noise = 1.0, noise_rep = 30):
+     
+    blocks = sort_pile(space.shapes)
+    nblocks = len(blocks)
+    pos = np.array([bb.body.position.int_tuple for bb in blocks[1:]])
+    pos_copy = deepcopy(pos)
+    py = pos[:,1]
+    randx = np.random.randn(nblocks-1, noise_rep)
+    results = np.zeros((noise_rep*(nblocks-1), nblocks-1))
+    count = 0
+    for bi in range(nblocks-1):
+        for ni in range(noise_rep):
+            reset_space(space, pos_copy)
+            blocks = sort_pile(space.shapes)
+            pos = np.array([bb.body.position.int_tuple for bb in blocks[1:]])
+            b = blocks[bi+1]
+            px = b.body.position
+            b.body.position = [px[0]+randx[bi,ni], px[1]]
+            space.reindex_shapes_for_body(b.body)
+            space.gravity = [0.0,-900.0]
+            for ti in range(50):
+                space.step(1/50.0)
+            new_pys = np.array([bb.body.position.int_tuple[1] for bb in blocks[1:]])
+            dy = py - new_pys
+            results[count] = dy<10
+            count+=1
+    results = results.mean(0)
+    pos = [(p[0],p[1]) for p in pos_copy]
+    results = OrderedDict(zip(pos, results))
+    return results
+            
 
 def is_pile(blocks):
     for bi in xrange(len(blocks)-1):

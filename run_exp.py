@@ -12,22 +12,27 @@ from shapes import *
 from discrimination import *
 import numpy as np
 from io_util import *
-from time import strftime, sleep
+from time import strftime, sleep, time
 from collections import OrderedDict
+import sys, io, pyautogui
+import vidcap, subprocess
 
+pygame.init()
 display_size = (1920,1000)
 stable_color = [52,152,219]
 unstable_color = [250,0,0]
-pygame.init()
 screen = pygame.display.set_mode(display_size, HWSURFACE | DOUBLEBUF | RESIZABLE)
-pygame.transform.scale(screen, (1000,1000))
 
-dataset_name = "exp_5_5_3_space"
-import sys, io
-spaces,labels = load_space('exp/' + dataset_name)
-num_piles = len(spaces)
-responses= [None]*len(spaces)
-
+dataset_names = [
+"exp_20_4_3_space", 
+"exp_50_5_3_space",
+"exp_50_7_3_space",
+"exp_30_10_3_space"]
+'''
+dataset_names = [
+"exp_5_4_3_space",
+"exp_5_10_3_space"]
+'''
 def toggle_highlight(space,screen, mouse,  resp):
     mouse = mouse[0], display_size[1] - mouse[1]
     for s in space.shapes:
@@ -49,13 +54,15 @@ def toggle_highlight(space,screen, mouse,  resp):
                         v[1] -= 1
                 pos = s.body.position.int_tuple
                 vertices = [(v[0] + pos[0], display_size[1]-(v[1] + pos[1]-1)) for v in vertices]
-                assert pos in resp
-                if resp[pos]:
+                if resp['choices'][pos]:
                     pygame.draw.polygon(screen, unstable_color, vertices,  0)
                 else:
                     pygame.draw.polygon(screen, stable_color, vertices,  0)
-                resp[pos] = not resp[pos]
+                resp['choices'][pos] = not resp['choices'][pos]
+                resp['seq'].append((time(), pos))
+                print resp
                 pygame.display.flip()
+    return resp
 
 def add_highlight(space, screen, pos):
     draw_highlight(space,screen, pos, [250,0,0])
@@ -88,13 +95,14 @@ def display_text(count):
     texts = []
     texts.append(font.render("Select all blocks that will fall", 1, (10, 10, 10)))
     texts.append(font.render("Left mouse to toggle selection", 1, (10, 10, 10)))
-    texts.append(font.render("Press Enter to confirm and move on", 1, (10, 10, 10)))
+    texts.append(font.render("Blue (default) means stable, red means unstable", 1, (10, 10, 10)))
+    texts.append(font.render("Press Enter to confirm and move on to next tower", 1, (10, 10, 10)))
     texts.append(font.render("You may press Enter with no selection (stable tower)", 1, (10, 10, 10)))
     texts.append(font.render(str(count) + " out of " + str(num_piles) + ' done', 1, (10, 10, 10)))
     for i, text in enumerate(texts):
         textpos = texts[i].get_rect()
-        textpos.top = 10+fontsize*i
-        textpos.left = 10
+        textpos.top = 20+fontsize*i
+        textpos.left = 50
         background.blit(texts[i], textpos)
 
     # Blit everything to the screen
@@ -102,61 +110,82 @@ def display_text(count):
     pygame.display.flip()
 
 
-def finish():
+def finish(lastone, responses):
         
-    np.save('exp/resp/'+strftime('%m-%d-%H-%M'), np.array(responses))
 
     fontsize = 26
     font = pygame.font.SysFont("Arial", fontsize)
-    
     correct = sum(map(lambda i:\
-        all(responses[i].values()) == all(labels[i].values()), range(num_piles)))
+        all(responses[i]['choices'].values()) == all(labels[i].values()), range(num_piles)))
 
     texts = []
-    texts.append(font.render("Thank you very much!", 1, (10, 10, 10)))
-    texts.append(font.render("You got " + str(correct) + " correct!", 1, (10, 10, 10)))
+    if lastone:
+        texts.append(font.render("Thank you very much!", 1, (10, 10, 10)))
+    else: 
+        texts.append(font.render("End of this set, take a rest", 1, (10, 10, 10)))
+    texts.append(font.render("You got " + str(correct) + ' out of ' +str(num_piles) +" correct!", 1, (10, 10, 10)))
     background.fill((250, 250, 250))
     for i, text in enumerate(texts):
         textpos = texts[i].get_rect()
-        textpos.top = 10+fontsize*i
-        textpos.left = 10
+        textpos.top = 20+fontsize*i
+        textpos.left = 50
         background.blit(texts[i], textpos)
 
     # Blit everything to the screen
     screen.blit(background, (0, 0))
     pygame.display.flip()
-    sleep(5) 
-    pygame.quit()
-    quit()
     
-count = 0
 # Fill background
 
-while True:
-    event = pygame.event.wait()
-    #for event in pygame.event.get():
-    if pygame.mouse.get_pressed()[0]:
-        if count == 0:
-            continue
-        pos = pygame.mouse.get_pos()
-        toggle_highlight(space, screen, pos, responses[count-1])
-        
-    if pygame.key.get_pressed()[pygame.K_RETURN] != 0:
-        while 1:
-            event = pygame.event.wait()
-            if pygame.key.get_pressed()[pygame.K_RETURN] == 0:
-                break
-        if count == num_piles:
-            print 'last one'
-            finish()
+all_responses= OrderedDict(zip(dataset_names,[None]*len(dataset_names)))
+for dataset_name in dataset_names:
 
-        space = spaces[count]
-        draw_blocks(screen, space, count)
-        blocks = sort_pile(space.shapes)
-        num_blocks = len(blocks)
-        ys = [s.body.position.int_tuple for s in blocks[1:]]
-        pygame.display.flip()
-        responses[count] = OrderedDict(zip(ys, [True]*num_blocks))
-        count+=1
-        pygame.time.wait(10)
+    spaces,labels = load_space('exp/' + dataset_name)
+    num_piles = len(spaces)
+    responses = []
+    for i in range(num_piles):
+        responses.append(dict(choices=None, seq=None))
+
+    count = 0
+
+    while True:
+        event = pygame.event.wait()
+        # for event in pygame.event.get():
+        if pygame.mouse.get_pressed()[0]:
+            while 1:
+                event = pygame.event.wait()
+                if pygame.mouse.get_pressed()[0] == 0:
+                    break
+            if count == 0:
+                continue
+            pos = pygame.mouse.get_pos()
+            toggle_highlight(space, screen, pos, responses[count-1])
+            pygame.time.wait(5)
+            
+        if pygame.key.get_pressed()[pygame.K_RETURN] != 0:
+            while 1:
+                event = pygame.event.wait()
+                if pygame.key.get_pressed()[pygame.K_RETURN] == 0:
+                    break
+            if count == num_piles:
+                all_responses[dataset_name] = responses
+                finish(dataset_name == dataset_names[-1], responses)
+                sleep(3) 
+                if dataset_name == dataset_names[-1]:
+                    pkl.dump(all_responses, open('exp/resp/'+strftime('%m-%d-%H-%M'),'w'))
+                    pygame.quit()
+                    # subprocess.Popen('python vidcap.py')
+                    quit()
+                else: break
+            space = spaces[count]
+            draw_blocks(screen, space, count)
+            blocks = sort_pile(space.shapes)
+            num_blocks = len(blocks)
+            ys = [s.body.position.int_tuple for s in blocks[1:]]
+            pygame.display.flip()
+            responses[count]['choices'] = OrderedDict(zip(ys, [True]*num_blocks))
+            responses[count]['seq'] = [(time(), (0,0))]
+            count+=1
+            pyautogui.moveTo(700,1080/2)
+            pygame.time.wait(10)
 

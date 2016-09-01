@@ -42,8 +42,8 @@ flags.DEFINE_integer('num_gridlines', 50, 'number of grid lines')
 flags.DEFINE_integer('num_minibatches', 1000, 'number of minibatches')
 flags.DEFINE_integer('num_images', 50000, 'number of images')
 flags.DEFINE_integer('train_size', 900, 'number of images')
-flags.DEFINE_string('exp_name', 'heatmap_dataset_50000_5_5_227_50', 'some informative name for the experiment')
 flags.DEFINE_string('data_file', '../data/dataset_50000_5_5_227_50.hdf5', 'path to data file')
+flags.DEFINE_string('exp_name', 'heatmap_dataset_50000_5_5_227_50_copy', 'used for finding the model of the run experiment')
 
 ################################################################################
 
@@ -220,107 +220,59 @@ def Alexnet(input_shape=[None, 4096], input_image_shape =[None, FLAGS.image_dim,
     SE = tf.nn.l2_loss(temp_dist)
     MSE = tf.reduce_mean(SE, name='mse')
     return {'cost': MSE, 'y_output': y, 'x_input': x, 'x_input_image': x_image,
-        'y_pred': tf.reshape(h2_regression, [-1, 50, 50, 1]), 'y_output_dummy':y}
+        'y_pred': tf.reshape(h2_regression, [-1, 50, 50, 1]),}
 
 
 def test_DNN_pretrained():
+    aevb_model = 'logs/'+ FLAGS.exp_name + '/-0'
     hdf_file = h5py.File(FLAGS.data_file, 'r')
     images = hdf_file.get('data')
     labels = hdf_file.get('label')[:,:, :, 0]/255.
     num_images = images.shape[0]
-    #print(labels)
     images = np.reshape(images, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.image_dim, FLAGS.image_dim,FLAGS.color_channel))
     labels = np.reshape(labels, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.num_gridlines, FLAGS.num_gridlines, 1))
+    cnn = Alexnet()
     sess = tf.Session()
-    alx = Alexify_data()
-    images_fc7 = np.zeros((FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), 4096))
-    for batch_i in (range(images.shape[0])):
-        print batch_i
-        images_fc7[batch_i, :, :] = sess.run(alx['fc7'], feed_dict={alx['x']:images[batch_i, :, :, :, :]})
-
-    alx_hdf_file = h5py.File('../data/alx_'+FLAGS.data_file, 'w')
-    alx_hdf_file.create_dataset('data', data=images_fc7)
+    init = tf.initialize_all_variables()
+    sess.run(init)
+    saver = tf.train.Saver()
+    print('here')
+    saver.restore(sess, aevb_model)
     hdf_file = h5py.File('../data/alx_'+FLAGS.data_file, 'r')
     images_fc7 = hdf_file.get('data')
     train_size = FLAGS.train_size
-    x_train = images_fc7[:train_size]
-    x_train_images = images[:train_size]
-    y_train = labels[:train_size]
+
     x_test = images_fc7[train_size:]
     x_test_images = images[train_size:]
     y_test = labels[train_size:]
 
-    cnn = Alexnet()
-    n_epochs = 400
-    learning_rate = 0.001
-    #optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, beta1=0.4, beta2=0.7, epsilon=1e-5).minimize(cnn['cost'])
-    optimizer = tf.train.RMSPropOptimizer(learning_rate).minimize(cnn['cost'])
-    try:
-        shutil.rmtree('logs/' + FLAGS.exp_name)
-    except:
-        pass
+
     if not os.path.exists('logs/' + FLAGS.exp_name):
         os.makedirs('logs/' + FLAGS.exp_name)
-    if not os.path.exists('logs/' + FLAGS.exp_name + '/plots'):
-        os.makedirs('logs/' + FLAGS.exp_name + '/plots')
+    if not os.path.exists('logs/' + FLAGS.exp_name + '/plots_runner_test'):
+        os.makedirs('logs/' + FLAGS.exp_name + '/plots_runner_test')
 
-    init = tf.initialize_all_variables()
-
-    sess.run(init)
-    for epoch_i in range(n_epochs):
-        print('--- Epoch', epoch_i)
-        train_cost = 0
-        for batch_i in np.random.permutation(range(y_train.shape[0])):
-            tic = time.time()
-            print batch_i
-            batch_y_output = y_train[batch_i, :, :]
-            batch_X_input = x_train[batch_i, :, :]
-            temp = sess.run([cnn['cost'], optimizer],
-                            feed_dict={cnn['y_output']: batch_y_output, cnn['x_input']: batch_X_input,
-                                       cnn['x_input_image']: x_train_images[batch_i, :, :, :, :]})[0]
-            if batch_i == 1:
-                 saver = tf.train.Saver()
-                 saver.save(sess, 'logs/' + FLAGS.exp_name + '/', global_step=0)
+    # init = tf.initialize_all_variables()
+    #
+    # sess.run(init)
 
 
-            print 'Minibatch cost: ', temp
-            train_cost += temp
-            toc = time.time()
-            print 'time per minibatch: ', toc - tic
-        print('Train cost:', train_cost / (y_train.shape[0]))
-        text_file = open("logs/" + FLAGS.exp_name + "/train_costs.txt", "a")
-        text_file.write(str(train_cost / (y_train.shape[0])))
-        text_file.write('\n')
-        text_file.close()
-
-        #################################### Testing ########################################
-        valid_cost = 0
-        for batch_i in range(y_test.shape[0]):
-            batch_y_output = y_test[batch_i, :, :, :, :]
-            batch_X_input = x_test[batch_i, :, :]
-            batch_X_input_images = x_test_images[batch_i, :, :, :, :]
-            valid_cost += sess.run([cnn['cost']], feed_dict={cnn['y_output']: batch_y_output,
-                                                            cnn['x_input']: batch_X_input,
-                                                             cnn['x_input_image']: batch_X_input_images})[0]
-            target = batch_y_output
-            pred_mat = sess.run([cnn['y_pred']][0], feed_dict={cnn['y_output']: batch_y_output,
-                                                         cnn['x_input']: batch_X_input,
-                                                         cnn['x_input_image']: batch_X_input_images} )[0]
-
-            fig0, axes0 = plt.subplots(1, 2, squeeze=False, figsize=(10, 5))
-            axes0[0][0].imshow(target.squeeze()[0], aspect='auto', interpolation="nearest", vmin=0, vmax=1)
-            #axes0[0][0].set_xticks(range(11))
-            axes0[0][0].set_title('True probs')
-            axes0[0][1].imshow(pred_mat.squeeze(), aspect='auto', interpolation="nearest", vmin=0, vmax=1)
-            #axes0[0][1].set_xticks(range(11))
-            axes0[0][1].set_title('Pred probs')
-    #        plt.colorbar()
-            plt.savefig('logs/' + FLAGS.exp_name + '/plots/prob_mat_' + str(batch_i) + '.png', bbox_inches='tight')
-        print('Validation cost:', valid_cost / (y_test.shape[0]))
-        text_file = open("logs/" + FLAGS.exp_name + "/test_costs.txt", "a")
-        text_file.write(str(valid_cost / (y_test.shape[0])))
-        text_file.write('\n')
-        text_file.close()
+    #################################### Testing ########################################
+    for batch_i in range(y_test.shape[0]):
+        print(batch_i)
+        batch_y_output = y_test[batch_i, :, :, :, :]
+        batch_X_input = x_test[batch_i, :, :]
+        batch_X_input_images = x_test_images[batch_i, :, :, :, :]
+        pred_mat = sess.run([cnn['y_pred']][0], feed_dict={cnn['y_output']: batch_y_output,
+                                                     cnn['x_input']: batch_X_input,
+                                                     cnn['x_input_image']: batch_X_input_images} )[0]
+        target = batch_y_output
+        fig0, axes0 = plt.subplots(1, 2, squeeze=False, figsize=(10, 5))
+        axes0[0][0].imshow(target.squeeze()[0], aspect='auto', interpolation="nearest", vmin=0, vmax=1)
+        axes0[0][0].set_title('True probs')
+        axes0[0][1].imshow(pred_mat.squeeze(), aspect='auto', interpolation="nearest", vmin=0, vmax=1)
+        axes0[0][1].set_title('Pred probs')
+        plt.savefig('logs/' + FLAGS.exp_name + '/plots_runner_test/prob_mat_'+str(batch_i)+'.png', bbox_inches='tight')
 
 
 

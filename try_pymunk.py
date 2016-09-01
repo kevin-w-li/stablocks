@@ -10,7 +10,8 @@ import numpy as np
 from interval import interval
 import copy
 import multiprocessing
-visual = False
+visual = True
+parallel = False
 import functools
 
 if visual:
@@ -28,39 +29,38 @@ from pymunk import pygame_util
 
 def pile_stability_w_noise(num_of_blocks=7, noise_trials=5, block_arrangements_num=3, var=1.):
     """ Deprecated NOT IN USE!!!"""
+    position_noise_list = truncnorm.rvs(- 1. / (var), 1. / (var), size=num_of_blocks)
+    hor_ver_list = np.random.binomial(2, 0.5, num_of_blocks)
+    for j in range(num_of_blocks):
+        for k in range(noise_trials):
+            if visual:
+                # just for stopping the code from running
+                for event in pygame.event.get():
+                    if event.type == QUIT:
+                        sys.exit(0)
+                    elif event.type == KEYDOWN and event.key == K_ESCAPE:
+                        sys.exit(0)
 
-        position_noise_list = truncnorm.rvs(- 1. / (var), 1. / (var), size=num_of_blocks)
-        hor_ver_list = np.random.binomial(2, 0.5, num_of_blocks)
-        for j in range(num_of_blocks):
-            for k in range(noise_trials):
-                if visual:
-                    # just for stopping the code from running
-                    for event in pygame.event.get():
-                        if event.type == QUIT:
-                            sys.exit(0)
-                        elif event.type == KEYDOWN and event.key == K_ESCAPE:
-                            sys.exit(0)
-
-                noise = np.random.randn(1) * 0
-                space = pymunk.Space()
-                space.gravity = (0.0, -900.0)
-                if visual:
-                    draw_options = pygame_util.DrawOptions(screen)
-                b_list, s_list = make_pile_given_noise(space=space, position_noise_list=position_noise_list,
-                                                       hor_ver_list=hor_ver_list)
-                for step_num in range(200):
-                    screen.fill((255, 255, 255))
-                    space.debug_draw(draw_options)
-                    if step_num == 100:
-                        b_list[j].apply_force_at_local_point([noise, 0.], b_list[j].position)
-                    space.step(1 / 50.0)
-                    clock.tick(50)
-                    pygame.display.flip()
-                for k in range(len(s_list)):
-                    space.remove(b_list[0])
-                    space.remove(s_list[0])
-                    b_list.remove(b_list[0])
-                    s_list.remove(s_list[0])
+            noise = np.random.randn(1) * 0
+            space = pymunk.Space()
+            space.gravity = (0.0, -900.0)
+            if visual:
+                draw_options = pygame_util.DrawOptions(screen)
+            b_list, s_list = make_pile_given_noise(space=space, position_noise_list=position_noise_list,
+                                                   hor_ver_list=hor_ver_list)
+            for step_num in range(200):
+                screen.fill((255, 255, 255))
+                space.debug_draw(draw_options)
+                if step_num == 100:
+                    b_list[j].apply_force_at_local_point([noise, 0.], b_list[j].position)
+                space.step(1 / 50.0)
+                clock.tick(50)
+                pygame.display.flip()
+            for k in range(len(s_list)):
+                space.remove(b_list[0])
+                space.remove(s_list[0])
+                b_list.remove(b_list[0])
+                s_list.remove(s_list[0])
 
 def rain_maker(num_of_blocks=20, block_dim = [100,40], var=1.,  base_coord = [(0., 100.), (600., 100.)], base_width = 10, mass=0.001):
     """ Old rain_maker with dropping objects. Do not use."""
@@ -215,14 +215,18 @@ def apply_noise_part_B(position_var, num_of_blocks, noise_trials, arg_index):
 def apply_noise_part_B_star(position_var, num_of_blocks, noise_trials, arg_index):
     return apply_noise_part_B(position_var, num_of_blocks, noise_trials, arg_index)
 
-def apply_noise(block_arrangements_num=10, noise_trials = 20, num_of_blocks = 7, noise_var = 1., position_var=1):
+def apply_noise(block_arrangements_num=3, noise_trials = 3, num_of_blocks = 3, noise_var = 1., position_var=1):
     success_array = np.zeros([block_arrangements_num, noise_trials, num_of_blocks])
-    pool = multiprocessing.Pool(processes=4)
-    func = functools.partial(apply_noise_part_B_star, position_var, num_of_blocks, noise_trials)
-    m4 = pool.map(func, range(block_arrangements_num))
-    output_list = map(lambda x: x, m4)
-    for i in range(block_arrangements_num):
-        success_array[i] = output_list[i]
+    if parallel:
+        pool = multiprocessing.Pool(processes=4)
+        func = functools.partial(apply_noise_part_B_star, position_var, num_of_blocks, noise_trials)
+        m4 = pool.map(func, range(block_arrangements_num))
+        output_list = map(lambda x: x[1], m4)
+        for i in range(block_arrangements_num):
+            success_array[i] = output_list[i]
+    else:
+        for i in range(block_arrangements_num):
+            success_array[i] = apply_noise_part_B(position_var, num_of_blocks, noise_trials, i)
     return success_array
 
 

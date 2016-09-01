@@ -66,11 +66,17 @@ def plot_space_label(space,label, display_size, image_size, fig=None, ax=None, p
     data = space_label_to_array(space, label, display_size, image_size)
     ax.imshow(data, cmap = plt.get_cmap('gray'), vmin = 0, vmax = 1 )
 
-def plot_space(space, display_size, image_size, fig, ax, plt_options):
+def plot_space(space, display_size, image_size, fig=None, ax=None, plt_options=None):
 
     # space: pymunk space that contains shapes
     # display_size: display size that is used in space
     # image_size: size of the image data
+
+    if fig is None:
+        fig, ax = plt.subplots()
+        ax.set(adjustable='box-forced', aspect=1, xlim=(0,display_size), ylim=(0, display_size))
+        ax.set_axis_off()
+        plt_options = pymunk.matplotlib_util.DrawOptions(ax)
 
     ax.set(adjustable='box-forced', aspect=1, xlim=(0,display_size), ylim=(0,display_size))
     plt_options = pymunk.matplotlib_util.DrawOptions(ax)

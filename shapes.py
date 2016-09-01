@@ -64,7 +64,8 @@ def make_pile_given_noise(space=None, base_coord = [(0., 100.), (600., 100.)], b
 
 
 
-def make_pile(space, num_of_blocks = 5, base_coord = [(0., 100.), (500., 100.)], base_width = 10,  mass = 1, block_dim = [100,40], noise=1):
+def make_pile(space, num_of_blocks = 5, base_coord = [(0., 100.), (500., 100.)], \
+        base_width = 10,  mass = 1, block_dim = [100,40], noise=1, tough = False):
 
     _, base_shape = add_base(space, base_coord[0], base_coord[1], width=base_width)
     first_block_pos = [(base_coord[0][0] + base_coord[1][0]) / 2., base_coord[0][1] + base_width + block_dim[1] / 2.]
@@ -77,7 +78,9 @@ def make_pile(space, num_of_blocks = 5, base_coord = [(0., 100.), (500., 100.)],
         body, shape = add_block(space, last_block_pos, mass = mass, block_dim = block_dim)
         last_block_width = block_dim[0]
         shuffle(block_dim)
-        x_range = last_block_width/2 + block_dim[0]/2
+        x_range = last_block_width/2 # + block_dim[0]/2
+        if not tough:
+            x_range += block_dim[0]/4
         x_pos = trunc_sample[i] * x_range + last_block_pos[0]
         last_block_pos = [x_pos, last_top + block_dim[1]/2.]
         last_top = last_block_pos[1] + block_dim[1]/2.

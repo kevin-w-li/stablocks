@@ -18,15 +18,16 @@ import h5py
 display_size = 1000
 image_size = 227
 my_dpi = 96
-block_size = 160
+block_size = 100
 base_width = 10
 num_blocks = 5
-num_piles = 5
+num_piles = 50
 num_slices = 100
 recog_noise = 3
+pos_noise = 0.8
 plt.rcParams['image.cmap'] = 'gray'
 #plt.rcParams['image.interpolation'] = 'none'
-assert(block_size * num_blocks < display_size)
+# assert(block_size * num_blocks <= display_size)
 pygame.init()
 pygame.display.set_caption("Blocks will fall?")
 clock = pygame.time.Clock()
@@ -46,7 +47,10 @@ ax.set_axis_off()
 def get_one(i):
     space = pymunk.Space()
     map(lambda p: p.remove(), filter(lambda c: isinstance(c, mpl.patches.Polygon), ax.get_children()))
-    blocks = make_pile(space, num_of_blocks = num_blocks, base_coord = [(0., 5.), (display_size, 5.)], base_width = base_width,  block_dim = [block_size, block_size/2], noise = 0.5)
+    blocks = make_pile(space, num_of_blocks = num_blocks, \
+        base_coord = [(0., 5.), (display_size, 5.)], base_width = base_width,  \
+        block_dim = [block_size, block_size/2], \
+        noise = pos_noise, tough = False)
 
     plane_heights, level_labels, det_level_labels = combined_center_of_mass(blocks, recog_noise = recog_noise)
     
