@@ -16,12 +16,12 @@ import h5py
 
 display_size = 1000
 image_size = 227    # input image size
-label_size = 50     # output heatmap size
+label_size = 100     # output heatmap size
 my_dpi = 96
 block_size = 100    # size of the block in display (compare with display_size)
 base_width = 10
 max_num_blocks = 10 # maximum number of block FIXME change this to do generalization
-num_piles = 100       # number of towers
+num_piles = 80000       # number of towers
 num_slices = 100
 recog_noise = 0
 plt.rcParams['image.cmap'] = 'gray'

@@ -42,8 +42,8 @@ flags.DEFINE_integer('num_gridlines', 50, 'number of grid lines')
 flags.DEFINE_integer('num_minibatches', 1000, 'number of minibatches')
 flags.DEFINE_integer('num_images', 60000, 'number of images')
 flags.DEFINE_integer('train_size', 900, 'number of images')
-flags.DEFINE_string('exp_name', 'dataset_60000_6_5_227_50', 'some informative name for the experiment')
-flags.DEFINE_string('data_file', '../data/dataset_60000_6_5_227_50.hdf5', 'path to data file')
+flags.DEFINE_string('exp_name', 'dataset_60000_10_0_227_50', 'some informative name for the experiment')
+flags.DEFINE_string('data_file', '../data/dataset_60000_10_0_227_50.hdf5', 'path to data file')
 
 ################################################################################
 
@@ -227,7 +227,7 @@ def test_DNN_pretrained():
     hdf_file = h5py.File(FLAGS.data_file, 'r')
     images = hdf_file.get('data')
     print(hdf_file.get('label').shape)
-    labels = hdf_file.get('label')[:,:, :]/255.
+    labels = hdf_file.get('label')[:,:, :]
     num_images = images.shape[0]
     images = np.reshape(images, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.image_dim, FLAGS.image_dim,FLAGS.color_channel))
     labels = np.reshape(labels, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.num_gridlines, FLAGS.num_gridlines, 1))
