@@ -39,11 +39,11 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('image_dim', 227, 'first dimension of the image; we are assuming a square image')
 flags.DEFINE_integer('color_channel', 3, 'number of color channels')
 flags.DEFINE_integer('num_gridlines', 50, 'number of grid lines')
-flags.DEFINE_integer('num_minibatches', 64, 'number of minibatches')
-flags.DEFINE_integer('num_images', 64, 'number of images')
-flags.DEFINE_integer('train_size', 0, 'number of images')
-flags.DEFINE_string('exp_name', 'dataset_64_6_5_227_50', 'some informative name for the experiment')
-flags.DEFINE_string('data_file', '../data/dataset_64_6_5_227_50.hdf5', 'path to data file')
+flags.DEFINE_integer('num_minibatches', 1000, 'number of minibatches')
+flags.DEFINE_integer('num_images', 60000, 'number of images')
+flags.DEFINE_integer('train_size', 900, 'number of images')
+flags.DEFINE_string('exp_name', 'dataset_60000_6_5_227_50', 'some informative name for the experiment')
+flags.DEFINE_string('data_file', '../data/dataset_60000_6_5_227_50.hdf5', 'path to data file')
 
 ################################################################################
 
@@ -226,9 +226,9 @@ def Alexnet(input_shape=[None, 4096], input_image_shape =[None, FLAGS.image_dim,
 def test_DNN_pretrained():
     hdf_file = h5py.File(FLAGS.data_file, 'r')
     images = hdf_file.get('data')
-    labels = hdf_file.get('label')[:,:, :, 0]/255.
+    print(hdf_file.get('label').shape)
+    labels = hdf_file.get('label')[:,:, :]/255.
     num_images = images.shape[0]
-    #print(labels)
     images = np.reshape(images, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.image_dim, FLAGS.image_dim,FLAGS.color_channel))
     labels = np.reshape(labels, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.num_gridlines, FLAGS.num_gridlines, 1))
     sess = tf.Session()

@@ -20,7 +20,7 @@ label_size = 50     # output heatmap size
 my_dpi = 96
 block_size = 100    # size of the block in display (compare with display_size)
 base_width = 10
-max_num_blocks = 10
+max_num_blocks = 10 # maximum number of block FIXME change this to do generalization
 num_piles = 100       # number of towers
 num_slices = 100
 recog_noise = 0
@@ -37,12 +37,19 @@ ax.set(adjustable='box-forced', aspect=1, xlim=(0,display_size), ylim=(0, displa
 ax.set_axis_off()
 
 def get_one(i):
+    print i
     space = pymunk.Space()
     map(lambda p: p.remove(), filter(lambda c: isinstance(c, mpl.patches.Polygon), ax.get_children()))
-    num_blocks = np.random.choice([7])
+
+    # FIXME change the two line below to do generalization
+    # num_blocks = np.random.randint(3, max_num_blocks)
+    # noise = 0.55
+    num_blocks = np.random.choice([5, 7, 10])
+    noise = 0.7 -(num_blocks-5)*0.07
+
     blocks = make_pile(space, num_of_blocks = num_blocks, \
         base_coord = [(0., 5.), (display_size, 5.)], base_width = base_width,
-        block_dim = [block_size, block_size/2], noise = 0.7 -(num_blocks-5)*0.07)
+        block_dim = [block_size, block_size/2], noise = noise)
     '''
     probablistic label
 
@@ -58,7 +65,7 @@ def get_one(i):
     # print (ax.get_children())
     return (data, labeled_data, block_labels)
 
-pool = multiprocessing.Pool(8)
+pool = multiprocessing.Pool(16)
 all_data_slices = pool.map(get_one, range(num_piles))
 all_data = np.array(map(lambda l:l[0], all_data_slices))
 all_labeled_data = np.array(map(lambda l:l[1], all_data_slices))
