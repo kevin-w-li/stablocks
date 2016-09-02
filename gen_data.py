@@ -14,14 +14,14 @@ from io_util import *
 import multiprocessing
 import h5py
 
-display_size = 300
+display_size = 1000
 image_size = 227
-label_size = 50
+label_size = 150
 my_dpi = 96
 block_size = 50
-base_width = 5
+base_width = 10
 max_num_blocks = 6
-num_piles = 64
+num_piles = 55000
 num_slices = 100
 recog_noise = 5
 plt.rcParams['image.cmap'] = 'gray'
@@ -41,10 +41,9 @@ ax.set(adjustable='box-forced', aspect=1, xlim=(0,display_size), ylim=(0, displa
 ax.set_axis_off()
 
 def get_one(i):
-    print 'generating ', i 
     space = pymunk.Space()
     map(lambda p: p.remove(), filter(lambda c: isinstance(c, mpl.patches.Polygon), ax.get_children()))
-    num_blocks = np.random.randint(max_num_blocks-1, max_num_blocks)
+    num_blocks = np.random.randint(3, max_num_blocks)
     blocks = make_pile(space, num_of_blocks = num_blocks, base_coord = [(0., 5.), (display_size, 5.)], base_width = base_width,  block_dim = [block_size, block_size/2], noise = 0.35)
 
     plane_heights, level_labels, det_level_labels = combined_center_of_mass(blocks, recog_noise = recog_noise, n_above = 2)
@@ -55,7 +54,7 @@ def get_one(i):
     data = space_to_array(space, display_size, image_size, fig, ax, plt_options)
     labeled_data = space_label_to_array(space, block_labels, display_size, label_size, fig, ax, plt_options)
     # print (ax.get_children())
-    return (data, labeled_data, slice_vec, block_labels)
+    return (data, labeled_data, slice_vec, block_labels, det_block_labels)
 
 pool = multiprocessing.Pool(8)
 all_data_slices = pool.map(get_one, range(num_piles))
@@ -63,7 +62,8 @@ all_data = np.array(map(lambda l:l[0], all_data_slices))
 all_labeled_data = np.array(map(lambda l:l[1], all_data_slices))
 all_slices = np.array(map(lambda l:l[2], all_data_slices))
 all_block_labels = map(lambda l:l[3], all_data_slices)
-all_classes = np.mean(np.array([np.mean(stable.values()) for stable in all_block_labels]))
+all_det_block_labels = map(lambda l:l[4], all_data_slices)
+all_classes = np.mean(np.array([np.mean(stable.values()) for stable in all_det_block_labels]))
 print 'mean of class is ', np.mean(all_classes)
 
 filename = '_'.join(('data/dataset', str(num_piles), str(max_num_blocks), str(recog_noise), str(image_size), str(label_size)))
@@ -72,6 +72,7 @@ f = h5py.File(filename, 'w')
 f.create_dataset('data', data = all_data)
 f.create_dataset('slices', data = all_slices)
 f.create_dataset('label', data = all_labeled_data)
+f.create_dataset('class', data = all_classes)
 f.close()
 plot_many_piles_slices(all_data, all_labeled_data,all_slices)
 

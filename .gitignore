@@ -9,3 +9,5 @@ dataset*
 data/*
 */*.npy
 DNN_pretrained/logs/*/*
+exp/*
+vidcap.py
