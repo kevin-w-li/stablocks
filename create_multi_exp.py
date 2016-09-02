@@ -22,11 +22,9 @@ block_size = 100
 base_width = 10
 num_blocks = 5
 num_piles = 30
-recog_noise = 3
+recog_noise = 0
 pos_noise = 0.8
 plt.rcParams['image.cmap'] = 'gray'
-#plt.rcParams['image.interpolation'] = 'none'
-# assert(block_size * num_blocks <= display_size)
 pygame.init()
 pygame.display.set_caption("Blocks will fall?")
 clock = pygame.time.Clock()
@@ -77,4 +75,3 @@ f.close()
 save_space(all_spaces, all_block_labels, \
     '_'.join(('exp/exp_multi', str(num_piles), 'space')))
 plot_many_piles_slices(all_data, all_labeled_data)
-

@@ -23,7 +23,7 @@ block_size = 100
 base_width = 10
 max_num_blocks = 12
 min_num_blocks = 6
-num_piles = 100
+num_piles = 50
 recog_noise = 0
 plt.rcParams['image.cmap'] = 'gray'
 #assert(block_size * num_blocks < display_size)
@@ -40,6 +40,7 @@ def get_one(i):
     space = pymunk.Space()
     map(lambda p: p.remove(), filter(lambda c: isinstance(c, mpl.patches.Polygon), ax.get_children()))
     num_blocks = np.random.randint(min_num_blocks, max_num_blocks)
+    num_blocks = np.random.choice([6,8,10])
     '''
     blocks = make_pile(space, num_of_blocks = num_blocks, base_coord = [(0., 5.), (display_size, 5.)], base_width = base_width,  block_dim = [block_size, block_size/2], noise = 0.35)
     '''
@@ -51,7 +52,7 @@ def get_one(i):
     # print (ax.get_children())
     return (data, labeled_data, block_labels)
 
-pool = multiprocessing.Pool(4)
+pool = multiprocessing.Pool(8)
 all_data_slices = pool.map(get_one, range(num_piles))
 all_data = np.array(map(lambda l:l[0], all_data_slices))
 all_labeled_data = np.array(map(lambda l:l[1], all_data_slices))

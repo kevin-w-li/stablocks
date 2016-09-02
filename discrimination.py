@@ -69,7 +69,7 @@ def simulate_whole(space, recog_noise = 1.0, noise_rep = 30, det = False):
             b.body.position = [px[0]+randx[bi,ni], px[1]]
             space.reindex_shapes_for_body(b.body)
             space.gravity = [0.0,-900.0]
-            for ti in range(50):
+            for ti in range(100):
                 space.step(1/50.0)
             new_pys = np.array([bb.body.position.int_tuple[1] for bb in blocks[1:]])
             dy = py - new_pys
