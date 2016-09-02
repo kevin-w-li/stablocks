@@ -5,15 +5,15 @@ from scipy.stats import truncnorm
 import inspect
 import re
 
-def add_block(space, position = [0.0,0.0], mass = 1, block_dim = [50, 50]):
+def add_block(space, position = [0.0,0.0], mass = 1, block_dim = [50, 50], radius=1):
     width = block_dim[0]
     height = block_dim[1]
 
-    coords = [[- width / 2.+1, - height / 2.+1], [-width /2.+1 , height / 2.-1], [width / 2.-1, height / 2.-1], [width / 2.-1, - height / 2.+1]]
+    coords = [[- width / 2.+radius, - height / 2.+radius], [-width /2.+radius , height / 2.-radius], [width / 2.-radius, height / 2.-radius], [width / 2.-radius, - height / 2.+radius]]
     moment = pymunk.moment_for_poly(mass, coords)
     body = pymunk.Body(mass,moment)
     body.position = position
-    shape = pymunk.Poly(body,coords, radius = 1)
+    shape = pymunk.Poly(body,coords, radius = radius)
     space.add(body,shape)
     shape.friction = 1000.0
     shape.elasticity = 0.0
@@ -88,14 +88,14 @@ def make_pile(space, num_of_blocks = 5, base_coord = [(0., 100.), (500., 100.)],
     sort_pile(shape_list) 
     return shape_list
 
-def add_base(space, p1, p2, width = 5):
+def add_base(space, p1, p2, width = 5, radius = 1):
     body = pymunk.Body(body_type = pymunk.Body.STATIC)
     mid =  (p1[0] + p2[0])/2.0, (p1[1] + p2[1])/2.0
     half_length = (p2[0]-p1[0])/2.0
     body.position = mid
-    coords = [[-half_length+1,-width+1], [+half_length-1,-width+1], \
-        [-half_length+1, +width-1], [+half_length-1, +width-1]]
-    shape = pymunk.Poly(body, coords, radius = 1)
+    coords = [[-half_length+radius,-width+radius], [+half_length-radius,-width+radius], \
+        [-half_length+radius, +width-radius], [+half_length-radius, +width-radius]]
+    shape = pymunk.Poly(body, coords, radius = radius)
     space.add(shape)
     shape.friction = 1000.0
     shape.elasticity = 0.0
