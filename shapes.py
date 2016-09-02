@@ -3,6 +3,7 @@ from random import shuffle
 import numpy as np
 from scipy.stats import truncnorm
 import inspect
+from interval import interval
 import re
 
 def add_block(space, position = [0.0,0.0], mass = 1, block_dim = [50, 50], radius=1):
@@ -15,7 +16,7 @@ def add_block(space, position = [0.0,0.0], mass = 1, block_dim = [50, 50], radiu
     body.position = position
     shape = pymunk.Poly(body,coords, radius = radius)
     space.add(body,shape)
-    shape.friction = 1000.0
+    shape.friction = 1
     shape.elasticity = 0.0
     return body, shape
 
@@ -88,6 +89,28 @@ def make_pile(space, num_of_blocks = 5, base_coord = [(0., 100.), (500., 100.)],
     sort_pile(shape_list) 
     return shape_list
 
+def copy_space(space):
+
+    shapes = sort_pile(space.shapes)
+    bodies = [s.body for s in shapes]
+    n = len(shapes)
+    new_space = pymunk.Space()
+    shape_list = []
+    base_shape = shapes[0]
+    base_coords = [(base_shape.bb.left, base_shape.body.position[1]),\
+                    (base_shape.bb.right, base_shape.body.position[1])]
+    base_width = base_shape.bb.top - base_shape.body.position[1]
+    _, base_shape = add_base(new_space, base_coords[0], base_coords[1], width = base_width) 
+    shape_list.append(base_shape)
+    for i in range(n-1):
+        block = shapes[i+1]
+        block_center = block.body.position
+        block_mass = block.body.mass
+        block_dim = [(block.bb.right - block.bb.left), (block.bb.top-block.bb.bottom)]
+        _, shape = add_block(new_space, block_center, mass = block_mass, block_dim = block_dim)
+        shape_list.append(shape)
+    return new_space, shape_list
+    
 def add_base(space, p1, p2, width = 5, radius = 1):
     body = pymunk.Body(body_type = pymunk.Body.STATIC)
     mid =  (p1[0] + p2[0])/2.0, (p1[1] + p2[1])/2.0
@@ -97,10 +120,41 @@ def add_base(space, p1, p2, width = 5, radius = 1):
         [-half_length+radius, +width-radius], [+half_length-radius, +width-radius]]
     shape = pymunk.Poly(body, coords, radius = radius)
     space.add(shape)
-    shape.friction = 1000.0
+    shape.friction = 1
     shape.elasticity = 0.0
     return body, shape
 
 def sort_pile(blocks):
-    blocks.sort(key = lambda x: x.body.position[1], reverse = False)
+    blocks.sort(key = lambda x: (x.body.position[1], x.body.position[0]), reverse = False)
     return blocks
+
+
+def smart_rain_maker(space, num_of_blocks=5, block_dim=[100, 40], var=1., base_coord=[(0., 100.), (600., 100.)], base_width=10, mass=1.0):
+    position_noise_list = truncnorm.rvs(- 1. / (var), 1. / (var), size=num_of_blocks)
+    hor_ver_list = np.random.binomial(2, 0.5, num_of_blocks)
+    base_body, base_shape = add_base(space, base_coord[0], base_coord[1], width=base_width)
+    body_list = []
+    shape_list = []
+    body_list.append(base_body)
+    shape_list.append(base_shape)
+    for j in range(num_of_blocks):
+        temp_block = base_body
+        temp_shape = base_shape
+        perm_block_dim = list(block_dim)
+        if hor_ver_list[j]:
+            perm_block_dim[0], perm_block_dim[1] = block_dim[1], block_dim[0]
+        block_pos = [position_noise_list[j] * block_dim[0] + (base_coord[1][0]/2), 1000]
+        block_interval = interval([block_pos[0] - perm_block_dim[0] / 2., block_pos[0] + perm_block_dim[0] / 2.])
+        for k in range(len(shape_list)):
+            shape_k_interval = interval([shape_list[k].bb.left, shape_list[k].bb.right])
+            if len(shape_k_interval & block_interval) > 0 and temp_shape.bb.top <= shape_list[k].bb.top:
+                temp_block = body_list[k]
+                temp_shape = shape_list[k]
+        block_pos[1] = temp_shape.bb.top + perm_block_dim[1] / 2.
+        body, shape = add_block(space, block_pos, mass=mass, block_dim=perm_block_dim)
+        # time.sleep(1)
+        body_list.append(body)
+        shape_list.append(shape)
+        # just for stopping the code from running
+
+    return body_list, shape_list

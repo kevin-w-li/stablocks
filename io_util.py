@@ -42,7 +42,9 @@ def space_label_to_array(space, label, display_size, image_size, fig=None, ax=No
     blocks = filter(lambda c: isinstance(c, mpl.patches.Polygon), ax.get_children())
     for p in blocks:
         center = tuple(np.mean(p.get_xy()[0:4],0).astype(int))
-        if center not in label: continue # the base does not have lables
+        if center not in label: 
+            p.set_visible(False)
+            continue# the base does not have lables
         p.set_facecolor(np.tile([label[center]], 3))
         p.set_edgecolor([1.0,1.0,1.0])
             
@@ -115,13 +117,14 @@ def plot_pile_slice(data, vec):
     ax2.set_axis_off()
     plt.show()
 
-def plot_many_piles_slices(data,label,vec):
+def plot_many_piles_slices(data,label,vec = None):
    
-    assert data.ndim == 4 and vec.ndim == 2
+    assert data.ndim == 4
     n = min(data.shape[0], 5)
     image_size = data.shape[1]
     label_size = label.shape[1]
-    num_slices = vec.shape[1]
+    if vec is not None:
+        num_slices = vec.shape[1]
 
     fig,axes = plt.subplots(2,n,figsize = (n*4,5))
     for i in range(n):
@@ -129,14 +132,15 @@ def plot_many_piles_slices(data,label,vec):
         axes[0,i].set(adjustable='box-forced', aspect=1, xlim=(0,image_size), ylim=(0,image_size))
         axes[0,i].invert_yaxis()
         ax = axes[1,i]
-        ax.imshow(label[i])
+        ax.imshow(label[i], clim = [0,1])
         ax.set(adjustable='box-forced', aspect=1, xlim=(0,label_size), ylim=(0,label_size))
-        ax2 = ax.twinx()
-        ax2.set(adjustable='box-forced', aspect=1, xlim=(0,label_size), ylim=(0,label_size))
         ax.invert_yaxis()
-        ax2.barh(label_size/float(num_slices)*np.linspace(0.5,num_slices-0.5,num_slices), vec[i]*label_size*0.2, align='center')
-        #ax.set_axis_off()
-        ax2.set_axis_off()
+        if vec is not None:
+            ax2 = ax.twinx()
+            ax2.set(adjustable='box-forced', aspect=1, xlim=(0,label_size), ylim=(0,label_size))
+            ax2.barh(label_size/float(num_slices)*np.linspace(0.5,num_slices-0.5,num_slices), vec[i]*label_size*0.2, align='center')
+            #ax.set_axis_off()
+            ax2.set_axis_off()
     plt.show()
 
 def load_hdf5(filename):
@@ -212,7 +216,14 @@ def space_array_to_label(space, display_size, probmap, pool = 2):
         probvalues[i] = np.median(probmap[region])/255.
     # probvalue = probmap[centers[:,0],centers[:,1]]/255.
     labels = OrderedDict(zip([(c[0], c[1]) for c in centers], tuple(probvalues)))
-    print labels
     return labels
     
+def load_data(resp_filename):
 
+    resps = pkl.load(open(resp_filename))
+    for resp in resps.values():
+        choices = [t['choices'] for t in resp]
+        for ci,c in enumerate(choices):
+            for bi, v in c.items():
+                choices[ci][bi] = float(v)
+    return resps

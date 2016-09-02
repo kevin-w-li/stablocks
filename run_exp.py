@@ -27,11 +27,12 @@ dataset_names = [
 "exp_20_4_3_space", 
 "exp_50_5_3_space",
 "exp_50_7_3_space",
-"exp_30_10_3_space"]
+"exp_multi_30_space"
+]
 '''
 dataset_names = [
-"exp_5_4_3_space",
-"exp_5_10_3_space"]
+"exp_multi_30_space"
+]
 '''
 def toggle_highlight(space,screen, mouse,  resp):
     mouse = mouse[0], display_size[1] - mouse[1]
@@ -79,7 +80,7 @@ def draw_blocks(screen, space, count):
     draw_options = pygame_util.DrawOptions(screen)
     color = draw_options.color_for_shape(space.shapes[1])
     color = [color.r, color.g, color.b, 0]
-    color = [0,0,0, 0]
+    color = [0,0,0,0]
     draw_options.shape_outline_color = (0,0,0,255)
     draw_options.collision_point_color = color
     space.debug_draw(draw_options)

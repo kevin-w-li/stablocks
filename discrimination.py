@@ -4,7 +4,7 @@ from scipy.stats import norm
 import numpy as np
 from collections import OrderedDict
 from copy import deepcopy
-from shapes import sort_pile
+from shapes import sort_pile, copy_space
 
 def combined_center_of_mass(blocks, n_above = 1000, recog_noise = 1.0):
     nblocks = len(blocks)-1
@@ -39,19 +39,29 @@ def reset_space(space, pos):
         space.reindex_shapes_for_body(b.body)
     return space
 
-def simulate_whole(space, recog_noise = 1.0, noise_rep = 30):
+def simulate_whole(space, recog_noise = 1.0, noise_rep = 30, det = False):
      
     blocks = sort_pile(space.shapes)
     nblocks = len(blocks)
+    
     pos = np.array([bb.body.position.int_tuple for bb in blocks[1:]])
     pos_copy = deepcopy(pos)
+    space_copy,_ = copy_space(space)
     py = pos[:,1]
-    randx = np.random.randn(nblocks-1, noise_rep)
-    results = np.zeros((noise_rep*(nblocks-1), nblocks-1))
+    if not det: 
+        results = np.zeros((noise_rep*(nblocks-1), nblocks-1))
+        randx = np.random.randn(nblocks-1, noise_rep) * recog_noise
+    else: 
+        recog_noise = 0.0
+        randx = np.zeros((1,1))
+        results = np.zeros((1, nblocks-1))
+        nblocks = 2
+        noise_rep = 1
     count = 0
     for bi in range(nblocks-1):
         for ni in range(noise_rep):
-            reset_space(space, pos_copy)
+            # reset_space(space, pos_copy)
+            space,_ = copy_space(space_copy)
             blocks = sort_pile(space.shapes)
             pos = np.array([bb.body.position.int_tuple for bb in blocks[1:]])
             b = blocks[bi+1]
@@ -63,11 +73,12 @@ def simulate_whole(space, recog_noise = 1.0, noise_rep = 30):
                 space.step(1/50.0)
             new_pys = np.array([bb.body.position.int_tuple[1] for bb in blocks[1:]])
             dy = py - new_pys
-            results[count] = dy<10
+            results[count] = dy<20
             count+=1
     results = results.mean(0)
     pos = [(p[0],p[1]) for p in pos_copy]
     results = OrderedDict(zip(pos, results))
+    reset_space(space, pos_copy)
     return results
             
 
