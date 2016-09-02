@@ -16,12 +16,12 @@ import h5py
 
 display_size = 1000
 image_size = 227
-label_size = 150
+label_size = 50
 my_dpi = 96
 block_size = 50
 base_width = 10
 max_num_blocks = 6
-num_piles = 55000
+num_piles = 60000
 num_slices = 100
 recog_noise = 5
 plt.rcParams['image.cmap'] = 'gray'
@@ -41,6 +41,7 @@ ax.set(adjustable='box-forced', aspect=1, xlim=(0,display_size), ylim=(0, displa
 ax.set_axis_off()
 
 def get_one(i):
+    print i
     space = pymunk.Space()
     map(lambda p: p.remove(), filter(lambda c: isinstance(c, mpl.patches.Polygon), ax.get_children()))
     num_blocks = np.random.randint(3, max_num_blocks)
@@ -56,7 +57,7 @@ def get_one(i):
     # print (ax.get_children())
     return (data, labeled_data, slice_vec, block_labels, det_block_labels)
 
-pool = multiprocessing.Pool(8)
+pool = multiprocessing.Pool(16)
 all_data_slices = pool.map(get_one, range(num_piles))
 all_data = np.array(map(lambda l:l[0], all_data_slices))
 all_labeled_data = np.array(map(lambda l:l[1], all_data_slices))
