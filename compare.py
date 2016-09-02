@@ -23,7 +23,9 @@ image_size = 227
 dataset = 'exp_50_5_3'
 data_filename = 'exp/'+dataset+'_data.hdf5'
 space_filename = 'exp/'+dataset+'_space'
-resp_filename = 'exp/resp/real/08-31-19-56'
+resp_filename = 'exp/resp/real/09-01-20-22'
+
+
 resps = pkl.load(open(resp_filename))
 resp = resps[dataset+'_space']
 choices = [t['choices'] for t in resp]
@@ -36,12 +38,11 @@ probmaps = np.array(f['labeled_data'])
 spaces, _ = load_space(space_filename)
 plot_space(spaces[1], display_size, image_size)
 sim_labels = simulate_whole(spaces[1])
-print [i[1] for i in sim_labels.items()]
-plt.show()
 
 num_blocks = len(spaces)
 recog_noise = 5
 num_slices = 100
+
 # neural nets
 '''
 for i in range(5):
@@ -68,22 +69,23 @@ def process_one(n_above, space):
     plane_heights, level_labels, det_level_labels = combined_center_of_mass(blocks, recog_noise = recog_noise, n_above = n_above)
     
     block_labels = labels_to_block_labels(blocks, plane_heights, level_labels)
-    
-    return block_labels, sim_labels
+    return block_labels
 
 from functools import partial
 probs = []
 for p in [1,3,5]:
     process_one_param = partial(process_one, p)
     all_labels = map(process_one_param, spaces)
-    probs.append([v for d in all_labels for v in d[0].values()])
+    probs.append([v for d in all_labels for v in d.values()])
 
 sim_labels = []
+det_labels = []
 for space in spaces:
     sim_labels.append(simulate_whole(space))
-probs.append([v for d in choices for v in d.values()])
+    det_labels.append(simulate_whole(space, det = True))
 probs.append([v for d in sim_labels for v in d.values()])
-print probs
+probs.append([v for d in det_labels for v in d.values()])
+probs.append([v for d in choices for v in d.values()])
 probs = np.array(probs)
 
 print np.corrcoef(probs)

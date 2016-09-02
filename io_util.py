@@ -42,7 +42,9 @@ def space_label_to_array(space, label, display_size, image_size, fig=None, ax=No
     blocks = filter(lambda c: isinstance(c, mpl.patches.Polygon), ax.get_children())
     for p in blocks:
         center = tuple(np.mean(p.get_xy()[0:4],0).astype(int))
-        if center not in label: continue # the base does not have lables
+        if center not in label: 
+            p.set_visible(False)
+            continue# the base does not have lables
         p.set_facecolor(np.tile([label[center]], 3))
         p.set_edgecolor([1.0,1.0,1.0])
             
@@ -130,7 +132,7 @@ def plot_many_piles_slices(data,label,vec = None):
         axes[0,i].set(adjustable='box-forced', aspect=1, xlim=(0,image_size), ylim=(0,image_size))
         axes[0,i].invert_yaxis()
         ax = axes[1,i]
-        ax.imshow(label[i])
+        ax.imshow(label[i], clim = [0,1])
         ax.set(adjustable='box-forced', aspect=1, xlim=(0,label_size), ylim=(0,label_size))
         ax.invert_yaxis()
         if vec is not None:
@@ -214,7 +216,6 @@ def space_array_to_label(space, display_size, probmap, pool = 2):
         probvalues[i] = np.median(probmap[region])/255.
     # probvalue = probmap[centers[:,0],centers[:,1]]/255.
     labels = OrderedDict(zip([(c[0], c[1]) for c in centers], tuple(probvalues)))
-    print labels
     return labels
     
 def load_data(resp_filename):
