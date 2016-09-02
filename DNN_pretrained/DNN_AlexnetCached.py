@@ -39,11 +39,11 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('image_dim', 227, 'first dimension of the image; we are assuming a square image')
 flags.DEFINE_integer('color_channel', 3, 'number of color channels')
 flags.DEFINE_integer('num_gridlines', 50, 'number of grid lines')
-flags.DEFINE_integer('num_minibatches', 1000, 'number of minibatches')
-flags.DEFINE_integer('num_images', 50000, 'number of images')
-flags.DEFINE_integer('train_size', 900, 'number of images')
-flags.DEFINE_string('exp_name', 'heatmap_dataset_50000_5_5_227_50', 'some informative name for the experiment')
-flags.DEFINE_string('data_file', '../data/dataset_50000_5_5_227_50.hdf5', 'path to data file')
+flags.DEFINE_integer('num_minibatches', 64, 'number of minibatches')
+flags.DEFINE_integer('num_images', 64, 'number of images')
+flags.DEFINE_integer('train_size', 0, 'number of images')
+flags.DEFINE_string('exp_name', 'dataset_64_6_5_227_50', 'some informative name for the experiment')
+flags.DEFINE_string('data_file', '../data/dataset_64_6_5_227_50.hdf5', 'path to data file')
 
 ################################################################################
 
@@ -238,9 +238,9 @@ def test_DNN_pretrained():
         print batch_i
         images_fc7[batch_i, :, :] = sess.run(alx['fc7'], feed_dict={alx['x']:images[batch_i, :, :, :, :]})
 
-    alx_hdf_file = h5py.File('../data/alx_'+FLAGS.data_file, 'w')
+    alx_hdf_file = h5py.File('../data/alx_'+FLAGS.exp_name, 'w')
     alx_hdf_file.create_dataset('data', data=images_fc7)
-    hdf_file = h5py.File('../data/alx_'+FLAGS.data_file, 'r')
+    hdf_file = h5py.File('../data/alx_'+FLAGS.exp_name, 'r')
     images_fc7 = hdf_file.get('data')
     train_size = FLAGS.train_size
     x_train = images_fc7[:train_size]
@@ -287,11 +287,14 @@ def test_DNN_pretrained():
             train_cost += temp
             toc = time.time()
             print 'time per minibatch: ', toc - tic
-        print('Train cost:', train_cost / (y_train.shape[0]))
-        text_file = open("logs/" + FLAGS.exp_name + "/train_costs.txt", "a")
-        text_file.write(str(train_cost / (y_train.shape[0])))
-        text_file.write('\n')
-        text_file.close()
+	try:
+        	print('Train cost:', train_cost / (y_train.shape[0]))
+        	text_file = open("logs/" + FLAGS.exp_name + "/train_costs.txt", "a")
+        	text_file.write(str(train_cost / (y_train.shape[0])))
+        	text_file.write('\n')
+        	text_file.close()
+	except:
+		pass
 
         #################################### Testing ########################################
         valid_cost = 0
@@ -308,7 +311,8 @@ def test_DNN_pretrained():
                                                          cnn['x_input_image']: batch_X_input_images} )[0]
 
             fig0, axes0 = plt.subplots(1, 2, squeeze=False, figsize=(10, 5))
-            axes0[0][0].imshow(target.squeeze()[0], aspect='auto', interpolation="nearest", vmin=0, vmax=1)
+	    #print(target.shape)
+            axes0[0][0].imshow(target[0].squeeze(), aspect='auto', interpolation="nearest", vmin=0, vmax=1)
             #axes0[0][0].set_xticks(range(11))
             axes0[0][0].set_title('True probs')
             axes0[0][1].imshow(pred_mat.squeeze(), aspect='auto', interpolation="nearest", vmin=0, vmax=1)

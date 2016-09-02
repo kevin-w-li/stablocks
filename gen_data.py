@@ -20,12 +20,12 @@ label_size = 50
 my_dpi = 96
 block_size = 50
 base_width = 5
-num_blocks = 5
-num_piles = 50000
+max_num_blocks = 6
+num_piles = 64
 num_slices = 100
 recog_noise = 5
 plt.rcParams['image.cmap'] = 'gray'
-assert(block_size * num_blocks < display_size)
+#assert(block_size * num_blocks < display_size)
 pygame.init()
 pygame.display.set_caption("Blocks will fall?")
 clock = pygame.time.Clock()
@@ -44,6 +44,7 @@ def get_one(i):
     print 'generating ', i 
     space = pymunk.Space()
     map(lambda p: p.remove(), filter(lambda c: isinstance(c, mpl.patches.Polygon), ax.get_children()))
+    num_blocks = np.random.randint(max_num_blocks-1, max_num_blocks)
     blocks = make_pile(space, num_of_blocks = num_blocks, base_coord = [(0., 5.), (display_size, 5.)], base_width = base_width,  block_dim = [block_size, block_size/2], noise = 0.35)
 
     plane_heights, level_labels, det_level_labels = combined_center_of_mass(blocks, recog_noise = recog_noise, n_above = 2)
@@ -65,7 +66,7 @@ all_block_labels = map(lambda l:l[3], all_data_slices)
 all_classes = np.mean(np.array([np.mean(stable.values()) for stable in all_block_labels]))
 print 'mean of class is ', np.mean(all_classes)
 
-filename = '_'.join(('data/dataset', str(num_piles), str(num_blocks), str(recog_noise), str(image_size), str(label_size)))
+filename = '_'.join(('data/dataset', str(num_piles), str(max_num_blocks), str(recog_noise), str(image_size), str(label_size)))
 filename = filename + '.hdf5'
 f = h5py.File(filename, 'w')
 f.create_dataset('data', data = all_data)

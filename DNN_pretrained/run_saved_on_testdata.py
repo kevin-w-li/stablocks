@@ -39,11 +39,13 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('image_dim', 227, 'first dimension of the image; we are assuming a square image')
 flags.DEFINE_integer('color_channel', 3, 'number of color channels')
 flags.DEFINE_integer('num_gridlines', 50, 'number of grid lines')
-flags.DEFINE_integer('num_minibatches', 1000, 'number of minibatches')
-flags.DEFINE_integer('num_images', 50000, 'number of images')
-flags.DEFINE_integer('train_size', 900, 'number of images')
-flags.DEFINE_string('data_file', '../data/dataset_50000_5_5_227_50.hdf5', 'path to data file')
-flags.DEFINE_string('exp_name', 'heatmap_dataset_50000_5_5_227_50_copy', 'used for finding the model of the run experiment')
+flags.DEFINE_integer('num_minibatches', 64, 'number of minibatches')
+flags.DEFINE_integer('num_images', 64, 'number of images')
+flags.DEFINE_integer('train_size', 0, 'number of images')
+flags.DEFINE_string('exp_name','dataset_60000_5_5_227_50.hdf5', 'used for finding the model of the run experiment')
+flags.DEFINE_string('data_file', 'dataset_64_6_5_227_50.hdf5', 'path to data file')
+flags.DEFINE_string('data_path', '../data/dataset_64_6_5_227_50.hdf5', 'path to data file')
+
 
 ################################################################################
 
@@ -225,7 +227,7 @@ def Alexnet(input_shape=[None, 4096], input_image_shape =[None, FLAGS.image_dim,
 
 def test_DNN_pretrained():
     aevb_model = 'logs/'+ FLAGS.exp_name + '/-0'
-    hdf_file = h5py.File(FLAGS.data_file, 'r')
+    hdf_file = h5py.File(FLAGS.data_path, 'r')
     images = hdf_file.get('data')
     labels = hdf_file.get('label')[:,:, :, 0]/255.
     num_images = images.shape[0]
@@ -238,7 +240,7 @@ def test_DNN_pretrained():
     saver = tf.train.Saver()
     print('here')
     saver.restore(sess, aevb_model)
-    hdf_file = h5py.File('../data/alx_'+FLAGS.data_file, 'r')
+    hdf_file = h5py.File('../data/alx_dataset_64_6_5_227_50' , 'r')
     images_fc7 = hdf_file.get('data')
     train_size = FLAGS.train_size
 
@@ -268,7 +270,7 @@ def test_DNN_pretrained():
                                                      cnn['x_input_image']: batch_X_input_images} )[0]
         target = batch_y_output
         fig0, axes0 = plt.subplots(1, 2, squeeze=False, figsize=(10, 5))
-        axes0[0][0].imshow(target.squeeze()[0], aspect='auto', interpolation="nearest", vmin=0, vmax=1)
+        axes0[0][0].imshow(target[0].squeeze(), aspect='auto', interpolation="nearest", vmin=0, vmax=1)
         axes0[0][0].set_title('True probs')
         axes0[0][1].imshow(pred_mat.squeeze(), aspect='auto', interpolation="nearest", vmin=0, vmax=1)
         axes0[0][1].set_title('Pred probs')
