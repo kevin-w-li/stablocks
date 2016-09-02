@@ -73,7 +73,7 @@ def simulate_whole(space, recog_noise = 1.0, noise_rep = 30, det = False):
                 space.step(1/50.0)
             new_pys = np.array([bb.body.position.int_tuple[1] for bb in blocks[1:]])
             dy = py - new_pys
-            results[count] = dy<10
+            results[count] = dy<20
             count+=1
     results = results.mean(0)
     pos = [(p[0],p[1]) for p in pos_copy]
