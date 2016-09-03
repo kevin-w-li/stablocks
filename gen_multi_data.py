@@ -1,5 +1,5 @@
 import matplotlib as mpl
-# mpl.use('Agg')
+mpl.use('Agg')
 from interval import interval
 import sys, io
 import pygame
@@ -17,13 +17,13 @@ import h5py
 
 display_size = 1000
 image_size = 227
-label_size = 50
+label_size = 100
 my_dpi = 96
 block_size = 100
 base_width = 10
 max_num_blocks = 12
 min_num_blocks = 6
-num_piles = 5
+num_piles = 100000
 recog_noise = 0
 plt.rcParams['image.cmap'] = 'gray'
 #assert(block_size * num_blocks < display_size)
@@ -37,6 +37,7 @@ plt_options = pymunk.matplotlib_util.DrawOptions(ax)
 ax.set(adjustable='box-forced', aspect=1, xlim=(0,display_size), ylim=(0, display_size))
 ax.set_axis_off()
 def get_one(i):
+    print i 
     space = pymunk.Space()
     map(lambda p: p.remove(), filter(lambda c: isinstance(c, mpl.patches.Polygon), ax.get_children()))
     num_blocks = np.random.randint(min_num_blocks, max_num_blocks)
@@ -56,13 +57,12 @@ pool = multiprocessing.Pool(8)
 all_data_slices = map(get_one, range(num_piles))
 all_data = np.array(map(lambda l:l[0], all_data_slices))
 all_labeled_data = np.array(map(lambda l:l[1], all_data_slices))
-plt.imshow(all_data[0], clim = (0,1))
-plt.show()
+all_labeled_data = np.float32(all_labeled_data>0.95)
 all_labels = np.array(map(lambda l:l[2], all_data_slices))
 all_classes = np.mean(np.array([np.mean(stable.values()) for stable in all_labels]))
 print 'mean of class is ', np.mean(all_classes)
 
-filename = '_'.join(('data/dataset', str(num_piles), str(max_num_blocks), str(recog_noise), str(image_size), str(label_size)))
+filename = '_'.join(('data/dataset_multi', str(num_piles), str(max_num_blocks), str(recog_noise), str(image_size), str(label_size)))
 filename = filename + '.hdf5'
 f = h5py.File(filename, 'w')
 f.create_dataset('data', data = all_data)

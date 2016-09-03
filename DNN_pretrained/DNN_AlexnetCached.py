@@ -38,12 +38,12 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_integer('image_dim', 227, 'first dimension of the image; we are assuming a square image')
 flags.DEFINE_integer('color_channel', 3, 'number of color channels')
-flags.DEFINE_integer('num_gridlines', 50, 'number of grid lines')
-flags.DEFINE_integer('num_minibatches', 1000, 'number of minibatches')
-flags.DEFINE_integer('num_images', 60000, 'number of images')
-flags.DEFINE_integer('train_size', 900, 'number of images')
-flags.DEFINE_string('exp_name', 'dataset_60000_6_5_227_50', 'some informative name for the experiment')
-flags.DEFINE_string('data_file', '../data/dataset_60000_6_5_227_50.hdf5', 'path to data file')
+flags.DEFINE_integer('num_gridlines', 100, 'number of grid lines')
+flags.DEFINE_integer('num_minibatches', 2000, 'number of minibatches')
+flags.DEFINE_integer('num_images', 100000, 'number of images')
+flags.DEFINE_integer('train_size', 1900, 'number of images')
+flags.DEFINE_string('exp_name', 'dataset_multi_100000_12_0_227_100', 'some informative name for the experiment')
+flags.DEFINE_string('data_file', '../data/dataset_multi_100000_12_0_227_100.hdf5', 'path to data file')
 
 ################################################################################
 
@@ -207,27 +207,27 @@ def Alexnet(input_shape=[None, 4096], input_image_shape =[None, FLAGS.image_dim,
     y = tf.placeholder(tf.float32, output_shape)
     x_image = tf.placeholder(tf.float32, input_image_shape)
 
-    W_regression = weight_variable([4096, 55 * 55])
-    b_regression = bias_variable([55 * 55])
+    W_regression = weight_variable([4096, 60 * 60])
+    b_regression = bias_variable([60 * 60])
     h_regression = tf.nn.relu(tf.matmul(x, W_regression) + b_regression)
 
-    W2_regression = weight_variable([55 * 55, 50 * 50])
-    b2_regression = bias_variable([50 * 50])
+    W2_regression = weight_variable([60 * 60, 100 * 100])
+    b2_regression = bias_variable([100 * 100])
     h2_regression = tf.nn.sigmoid(tf.matmul(h_regression, W2_regression) + b2_regression)
 
     #target_grayscaled = (tf.image.rgb_to_grayscale(target_resized) / 255.)
-    temp_dist = tf.sub(y, tf.reshape(h2_regression, [-1, 50, 50, 1]))
+    temp_dist = tf.sub(y, tf.reshape(h2_regression, [-1, 100, 100, 1]))
     SE = tf.nn.l2_loss(temp_dist)
     MSE = tf.reduce_mean(SE, name='mse')
     return {'cost': MSE, 'y_output': y, 'x_input': x, 'x_input_image': x_image,
-        'y_pred': tf.reshape(h2_regression, [-1, 50, 50, 1]), 'y_output_dummy':y}
+        'y_pred': tf.reshape(h2_regression, [-1, 100, 100, 1]), 'y_output_dummy':y}
 
 
 def test_DNN_pretrained():
     hdf_file = h5py.File(FLAGS.data_file, 'r')
     images = hdf_file.get('data')
     print(hdf_file.get('label').shape)
-    labels = hdf_file.get('label')[:,:, :]/255.
+    labels = hdf_file.get('label')[:,:, :]
     num_images = images.shape[0]
     images = np.reshape(images, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.image_dim, FLAGS.image_dim,FLAGS.color_channel))
     labels = np.reshape(labels, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.num_gridlines, FLAGS.num_gridlines, 1))

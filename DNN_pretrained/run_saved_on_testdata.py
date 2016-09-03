@@ -233,6 +233,7 @@ def test_DNN_pretrained():
     num_images = images.shape[0]
     images = np.reshape(images, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.image_dim, FLAGS.image_dim,FLAGS.color_channel))
     labels = np.reshape(labels, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.num_gridlines, FLAGS.num_gridlines, 1))
+
     cnn = Alexnet()
     sess = tf.Session()
     init = tf.initialize_all_variables()
