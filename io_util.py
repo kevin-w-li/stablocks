@@ -35,7 +35,7 @@ def space_to_array(space, display_size, image_size, fig = None, ax = None, plt_o
     data = np.array(data, dtype = np.uint8)
     return data
 
-def space_label_to_array(space, label, display_size, image_size, fig=None, ax=None, plt_options=None):
+def space_label_to_array(space, label, display_size, image_size, label_size, fig=None, ax=None, plt_options=None):
 
     if fig is None:
         fig, ax = plt.subplots()
@@ -45,7 +45,18 @@ def space_label_to_array(space, label, display_size, image_size, fig=None, ax=No
         
     space.debug_draw(plt_options)
     extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+    buf = io.BytesIO()
+    fig.savefig(buf, format='png', bbox_inches=extent)
+    buf.seek(0)
+    im = Image.open(buf)
+    im = im.resize((image_size,image_size),  Image.ANTIALIAS)
+    data = np.array(im)/255.
+    data = data[:,:,0:3]
+
+    ax.clear()
+    space.debug_draw(plt_options)
     blocks = filter(lambda c: isinstance(c, mpl.patches.Polygon), ax.get_children())
+    
     for p in blocks:
         center = tuple(np.mean(p.get_xy()[0:4],0).astype(int))
         if center not in label: 
@@ -55,14 +66,15 @@ def space_label_to_array(space, label, display_size, image_size, fig=None, ax=No
         p.set_edgecolor([1.0,1.0,1.0])
             
     buf = io.BytesIO()
+    extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
     fig.savefig(buf, format='png', bbox_inches=extent)
     buf.seek(0)
-    im = Image.open(buf)
-    im = im.resize((image_size,image_size),  Image.ANTIALIAS)
-    data = np.array(im)/255.
-    data = data[:,:,0]
+    lim = Image.open(buf)
+    lim = lim.resize((label_size,label_size),  Image.ANTIALIAS)
+    ldata = np.array(lim)/255.
+    ldata = ldata[:,:,0]
     plt.close()
-    return data
+    return data, ldata
 
 def plot_space_label(space,label, display_size, image_size, fig=None, ax=None, plt_options=None):
     
@@ -136,7 +148,7 @@ def plot_many_piles_slices(data,label,vec = None):
 
     fig,axes = plt.subplots(2,n,figsize = (n*4,5))
     for i in range(n):
-        axes[0,i].imshow(data[i])
+        axes[0,i].imshow(data[i], clim = [0,255])
         axes[0,i].set(adjustable='box-forced', aspect=1, xlim=(0,image_size), ylim=(0,image_size))
         axes[0,i].invert_yaxis()
         ax = axes[1,i]
@@ -225,7 +237,7 @@ def space_array_to_label(space, display_size, probmap, pool = 2):
     # probvalue = probmap[centers[:,0],centers[:,1]]/255.
     labels = OrderedDict(zip([(c[0], c[1]) for c in centers], tuple(probvalues)))
     return labels
-    
+'''    
 def load_data(resp_filename):
 
     resps = pkl.load(open(resp_filename))
@@ -236,4 +248,21 @@ def load_data(resp_filename):
                 choices[ci][bi] = float(v)
     return resps
 
+
+
+'''
+
+def load_data(resp_filename):
+
+    resps = pkl.load(open(resp_filename))
+    resps_new = OrderedDict()
+    for rk,resp in resps.iteritems():
+        if '_space' in rk: rk = rk[:-6]
+        resps_new[rk] = []
+        for ti, tower in enumerate(resp):
+            choices_shift = OrderedDict()
+            for ci, c in tower['choices'].items():
+                choices_shift[(ci[0]-920/2, ci[1])] = float(c)
+            resps_new[rk].append({'seq': tower['seq'], 'choices': choices_shift})
+    return resps_new
 

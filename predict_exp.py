@@ -17,7 +17,7 @@ import os
 display_size = 1000
 image_size = 227
 label_size = 100
-exps = ['exp_20_4_3', 'exp_50_5_3', 'exp_50_7_3', 'exp_30_10_3' ]
+exps = ['exp_multi_30']
 
 space = pymunk.Space()
 fig,ax = plt.subplots(1, figsize = (6,6))
@@ -26,36 +26,42 @@ ax.set(adjustable='box-forced', aspect=1, xlim=(0,display_size), ylim=(0, displa
 ax.set_axis_off()
 data = []
 labeled_data = []
-block_labels = OrderedDict(zip(exps, [[]]*len(exps)))
+block_labels = OrderedDict(zip(exps, [None]*len(exps)))
+block_data = OrderedDict(zip(exps, [None]*len(exps)))
 for di, dataset in enumerate(exps):
     
     space_filename = 'exp/'+dataset+'_space'
     spaces, _ = load_space(space_filename)
     num_towers = len(spaces)
-    for si, space in enumerate(spaces):
+    block_labels[dataset] = []
+    block_data[dataset] = []
+    for si, space in enumerate(spaces[:1]):
         print [di, si]
-        data.append(space_to_array(space, display_size, image_size, fig, ax, plt_options))
         ax.clear()
         block_labels[dataset].append(simulate_whole(space, recog_noise = 1., noise_rep = 1, det = True))
-        labeled_data.append(space_label_to_array(space, block_labels[dataset][si], display_size, label_size, \
-                            fig=fig, ax=ax, plt_options = plt_options))
+        d, ld = space_label_to_array(space, block_labels[dataset][si], display_size, image_size, label_size, \
+                                    fig=fig, ax=ax, plt_options = plt_options)
+        block_data[dataset].append(d)
+        data.append(d) 
+        labeled_data.append(ld)
         ax.clear()
         '''
         _, axes = plt.subplots(2)
-        axes[0].imshow(data[si])
-        axes[1].imshow(labeled_data[si])
+        axes[0].imshow(d)
+        axes[1].imshow(ld)
         plt.show()
         '''
-data = np.array(data)
+data = np.array(labeled_data)
 print data.shape
 labeled_data = np.array(labeled_data)
 print labeled_data.shape
-print block_labels
+print labeled_data.mean()
 labeled_data = np.float32(labeled_data>0.95)
-filename = 'exp/sim_data_label'
+filename = 'exp/sim_data_label_multi'
 filename = filename + '.hdf5'
 f = h5py.File(filename, 'w')
 f.create_dataset('data', data = data)
 f.create_dataset('label', data = labeled_data)
 
-pkl.dump(labeled_data, open('exp/sim_block_labels', 'w'))
+pkl.dump(block_labels, open('exp/sim_block_labels_multi', 'w'))
+pkl.dump(block_data, open('exp/block_data_multi', 'w'))
