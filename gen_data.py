@@ -21,10 +21,12 @@ my_dpi = 96
 block_size = 100    # size of the block in display (compare with display_size)
 base_width = 10
 max_num_blocks = 10 # maximum number of block FIXME change this to do generalization
-num_piles = 80000       # number of towers
+num_piles = 100000       # number of towers
 num_slices = 100
 recog_noise = 0
 plt.rcParams['image.cmap'] = 'gray'
+plt.rcParams['image.interpolation'] = 'nearest'
+
 assert(block_size * max_num_blocks <= display_size)
 pygame.init()
 pygame.display.set_caption("Blocks will fall?")
@@ -69,6 +71,7 @@ pool = multiprocessing.Pool(16)
 all_data_slices = pool.map(get_one, range(num_piles))
 all_data = np.array(map(lambda l:l[0], all_data_slices))
 all_labeled_data = np.array(map(lambda l:l[1], all_data_slices))
+all_labeled_data = np.float32(all_labeled_data>0.95)
 all_block_labels = map(lambda l:l[2], all_data_slices)
 all_classes = np.mean(np.array([np.mean(stable.values()) for stable in all_block_labels]))
 print 'mean of class is ', np.mean(all_classes)
