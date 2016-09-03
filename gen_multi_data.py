@@ -23,7 +23,7 @@ block_size = 100
 base_width = 10
 max_num_blocks = 12
 min_num_blocks = 6
-num_piles = 100000
+num_piles = 10000
 recog_noise = 0
 plt.rcParams['image.cmap'] = 'gray'
 #assert(block_size * num_blocks < display_size)
@@ -48,7 +48,7 @@ def get_one(i):
     _, blocks = smart_rain_maker(space, num_of_blocks=num_blocks, block_dim = [block_size, block_size/2.0], var = 0.7, base_coord = [(0,5), (display_size, 5)])
     new_space, _ = copy_space(space)
     data = space_to_array(space, display_size, image_size, fig, ax, plt_options)
-    block_labels = simulate_whole(space, recog_noise = recog_noise, noise_rep = 1, det = False)
+    block_labels = simulate_whole(space, recog_noise = recog_noise, noise_rep = 1, det = False)[0]
     labeled_data = space_label_to_array(new_space, block_labels, display_size, image_size, label_size, fig, ax, plt_options)[1]
     # print (ax.get_children())
     return (data, labeled_data, block_labels)

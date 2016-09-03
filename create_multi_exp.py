@@ -17,11 +17,12 @@ import h5py
 
 display_size = 1000
 image_size = 227
+label_size = 100
 my_dpi = 96
 block_size = 100
 base_width = 10
 num_blocks = 5
-num_piles = 30
+num_piles = 5
 recog_noise = 0
 pos_noise = 0.8
 plt.rcParams['image.cmap'] = 'gray'
@@ -45,15 +46,14 @@ ax.set_axis_off()
 def get_one(i):
     space = pymunk.Space()
     map(lambda p: p.remove(), filter(lambda c: isinstance(c, mpl.patches.Polygon), ax.get_children()))
-    num_blocks = 6+(i/10)*2 
+    num_blocks = 6+(i/1)*2 
     '''
     blocks = make_pile(space, num_of_blocks = num_blocks, base_coord = [(0., 5.), (display_size, 5.)], base_width = base_width,  block_dim = [block_size, block_size/2], noise = 0.35)
     '''
     _, blocks = smart_rain_maker(space, num_of_blocks=num_blocks, block_dim = [block_size, block_size/2.0], var = pos_noise, base_coord = [(0,5), (display_size, 5)])
     new_space, _ = copy_space(space)
-    data = space_to_array(space, display_size, image_size, fig, ax, plt_options)
-    block_labels = simulate_whole(space, recog_noise = recog_noise, noise_rep = 1, det = True)
-    labeled_data = space_label_to_array(new_space,block_labels, display_size, image_size, fig, ax, plt_options)
+    block_labels = simulate_whole(space, recog_noise = recog_noise, noise_rep = 1, det = True)[0]
+    data, labeled_data = space_label_to_array(new_space,block_labels, display_size, image_size, label_size, fig, ax, plt_options)
     # print (ax.get_children())
     return (data, labeled_data, block_labels, space)
 

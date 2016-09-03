@@ -24,6 +24,7 @@ import os
 display_size = 1000
 image_size = 1000
 label_size = 1000
+recog_noise = 20.
 sim_block_labels = pkl.load(open('exp/sim_block_labels'))
 probmaps = np.load(open('exp/nn_probmaps'))
 
@@ -46,12 +47,14 @@ human_average_given_conf = dict()
 truth_average_given_conf = dict()
 npe_average_given_conf = dict()
 nn_average_given_conf = dict()
+cog_average_given_conf = dict()
 
 
 
 for exp in exps:
     human_average_given_conf[exp] = []
     truth_average_given_conf[exp] = []
+
 for exp in exps:
     for ti, towers in enumerate(all_mean_resps[exp]):
         del all_mean_resps[exp][ti]['seq']
@@ -84,6 +87,7 @@ visual = False
 all_true_resps = deepcopy(all_mean_resps)
 all_nn_resps = deepcopy(all_mean_resps)
 all_npe_resps = deepcopy(all_mean_resps)
+all_cog_resps = deepcopy(all_mean_resps)
 all_human_resps = all_mean_resps 
 
 for di, exp in enumerate(exps):
@@ -101,7 +105,7 @@ for di, exp in enumerate(exps):
 
         human_labels = all_mean_resps[exp][si]
         # human_labeled_data = space_label_to_array(space, human_labels, display_size, image_size, label_size)[1]
-        npe_labels = simulate_whole(space, recog_noise = 20., noise_rep = 2, det = False)
+        npe_labels, npe_stable = simulate_whole(space, recog_noise = recog_noise, noise_rep = 2, det = False)
         # npe_labeled_data = space_label_to_array(space, npe_labels, display_size, image_size, label_size)[1]
         all_npe_resps[exp][si] = npe_labels
 
@@ -109,6 +113,12 @@ for di, exp in enumerate(exps):
         nn_labels = space_array_to_label(space, display_size, probmap)
         # nn_labeled_data = space_label_to_array(space, nn_labels, display_size, image_size, label_size)[1]
         all_nn_resps[exp][si] = nn_labels
+
+        n_above = 2
+        blocks = sort_pile(space.shapes)
+        plane_heights, level_labels, _ = combined_center_of_mass(blocks, recog_noise = recog_noise, n_above = n_above)
+        cog_labels = labels_to_block_labels(blocks, plane_heights, level_labels)
+        all_cog_resps[exp][si] = cog_labels
 
         '''
         if si<n_towers:
@@ -150,23 +160,35 @@ human_average_given_conf = num_falling_blocks(all_human_resps)
 truth_average_given_conf = num_falling_blocks(all_true_resps)
 npe_average_given_conf = num_falling_blocks(all_npe_resps)
 nn_average_given_conf = num_falling_blocks(all_nn_resps)
+cog_average_given_conf = num_falling_blocks(all_cog_resps)
 if visual:
     plt.show()
-fig, axes = plt.subplots(3,3)
+fig, axes = plt.subplots(5,3, figsize=(10,8))
+ylabels = ['truth', 'PE', 'NN', 'CoG']
 for i, exp in enumerate(exps):
+
     n = len(human_average_given_conf[exp])
     corr_true = np.corrcoef(human_average_given_conf[exp], truth_average_given_conf[exp])[0,1]
     corr_npe = np.corrcoef(human_average_given_conf[exp], npe_average_given_conf[exp])[0,1]
     corr_nn = np.corrcoef(human_average_given_conf[exp], nn_average_given_conf[exp])[0,1]
+    corr_nn = np.corrcoef(human_average_given_conf[exp], cog_average_given_conf[exp])[0,1]
     axes[0,i].scatter(human_average_given_conf[exp], truth_average_given_conf[exp], c='g')
+    axes[0,i].text(0.1,0.9,'\gt')
     axes[1,i].scatter(human_average_given_conf[exp], npe_average_given_conf[exp], c='r')
     axes[2,i].scatter(human_average_given_conf[exp], nn_average_given_conf[exp], c = np.tile([227, 218, 201],(n,1))/255.)
+    axes[3,i].scatter(human_average_given_conf[exp], cog_average_given_conf[exp], c = np.tile([77, 0, 75],(n,1))/255.)
+
     '''
     ax[i].plot(human_average_given_conf[exp], 'r')
     ax[i].plot(truth_average_given_conf[exp], 'b')
     '''
+    if i != 0:
+        map(lambda ax: ax.set(yticklabels=[]), axes[:,i])
+    if i == 0:
+        map(lambda j: axes[j,i].set(ylabel=ylabels[j]), range(len(ylabels)))
+    map(lambda ax: ax.set(xticklabels=[]), axes[:-1,i])
 map(lambda ax: map(lambda a: a.set(adjustable='box-forced', aspect=1, xlim=(0, 1), ylim=(0,1)), ax), axes)
-
+map(lambda ax: ax.set(xlabel='human'), axes[-1,:])
 plt.show()
 
 num_blocks = len(spaces)

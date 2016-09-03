@@ -35,7 +35,7 @@ for di, dataset in enumerate(exps):
     num_towers = len(spaces)
     block_labels[dataset] = []
     block_data[dataset] = []
-    for si, space in enumerate(spaces[:1]):
+    for si, space in enumerate(spaces):
         print [di, si]
         ax.clear()
         block_labels[dataset].append(simulate_whole(space, recog_noise = 1., noise_rep = 1, det = True))
@@ -51,17 +51,16 @@ for di, dataset in enumerate(exps):
         axes[1].imshow(ld)
         plt.show()
         '''
-data = np.array(labeled_data)
-print data.shape
+
+data = np.array(data)
 labeled_data = np.array(labeled_data)
-print labeled_data.shape
-print labeled_data.mean()
 labeled_data = np.float32(labeled_data>0.95)
 filename = 'exp/sim_data_label_multi'
 filename = filename + '.hdf5'
 f = h5py.File(filename, 'w')
 f.create_dataset('data', data = data)
 f.create_dataset('label', data = labeled_data)
-
+'''
 pkl.dump(block_labels, open('exp/sim_block_labels_multi', 'w'))
 pkl.dump(block_data, open('exp/block_data_multi', 'w'))
+'''
