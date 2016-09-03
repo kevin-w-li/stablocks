@@ -1,5 +1,6 @@
 import matplotlib as mpl
 mpl.use('Agg')
+from interval import interval
 import sys, io
 import pygame
 from matplotlib import pyplot as plt
@@ -15,19 +16,17 @@ import multiprocessing
 import h5py
 
 display_size = 1000
-image_size = 227    # input image size
-label_size = 100     # output heatmap size
+image_size = 227
+label_size = 100
 my_dpi = 96
-block_size = 100    # size of the block in display (compare with display_size)
+block_size = 100
 base_width = 10
-max_num_blocks = 10 # maximum number of block FIXME change this to do generalization
-num_piles = 100000       # number of towers
-num_slices = 100
+max_num_blocks = 12
+min_num_blocks = 6
+num_piles = 100000
 recog_noise = 0
 plt.rcParams['image.cmap'] = 'gray'
-plt.rcParams['image.interpolation'] = 'nearest'
-
-assert(block_size * max_num_blocks <= display_size)
+#assert(block_size * num_blocks < display_size)
 pygame.init()
 pygame.display.set_caption("Blocks will fall?")
 clock = pygame.time.Clock()
@@ -37,29 +36,16 @@ fig,ax = plt.subplots(1, figsize = (6,6))
 plt_options = pymunk.matplotlib_util.DrawOptions(ax)
 ax.set(adjustable='box-forced', aspect=1, xlim=(0,display_size), ylim=(0, display_size))
 ax.set_axis_off()
-
 def get_one(i):
-    print i
+    print i 
     space = pymunk.Space()
     map(lambda p: p.remove(), filter(lambda c: isinstance(c, mpl.patches.Polygon), ax.get_children()))
-
-    # FIXME change the two line below to do generalization
-    # num_blocks = np.random.randint(3, max_num_blocks)
-    # noise = 0.55
-    num_blocks = np.random.choice([5, 7, 10])
-    noise = 0.7 -(num_blocks-5)*0.07
-
-    blocks = make_pile(space, num_of_blocks = num_blocks, \
-        base_coord = [(0., 5.), (display_size, 5.)], base_width = base_width,
-        block_dim = [block_size, block_size/2], noise = noise)
+    num_blocks = np.random.randint(min_num_blocks, max_num_blocks)
+    num_blocks = np.random.choice([6,8,10])
     '''
-    probablistic label
-
-    plane_heights, level_labels, det_level_labels = combined_center_of_mass(blocks, recog_noise = recog_noise, n_above = 2)
-    block_labels = labels_to_block_labels(blocks, plane_heights, level_labels)
-    det_block_labels = det_labels_to_block_labels(blocks, plane_heights, det_level_labels)
-    slice_vec = labels_to_level_strips((0,display_size), plane_heights, level_labels, num_slices)
+    blocks = make_pile(space, num_of_blocks = num_blocks, base_coord = [(0., 5.), (display_size, 5.)], base_width = base_width,  block_dim = [block_size, block_size/2], noise = 0.35)
     '''
+    _, blocks = smart_rain_maker(space, num_of_blocks=num_blocks, block_dim = [block_size, block_size/2.0], var = 0.7, base_coord = [(0,5), (display_size, 5)])
     new_space, _ = copy_space(space)
     data = space_to_array(space, display_size, image_size, fig, ax, plt_options)
     block_labels = simulate_whole(space, recog_noise = recog_noise, noise_rep = 1, det = True)
@@ -72,11 +58,11 @@ all_data_slices = pool.map(get_one, range(num_piles))
 all_data = np.array(map(lambda l:l[0], all_data_slices))
 all_labeled_data = np.array(map(lambda l:l[1], all_data_slices))
 all_labeled_data = np.float32(all_labeled_data>0.95)
-all_block_labels = map(lambda l:l[2], all_data_slices)
-all_classes = np.mean(np.array([np.mean(stable.values()) for stable in all_block_labels]))
+all_labels = np.array(map(lambda l:l[2], all_data_slices))
+all_classes = np.mean(np.array([np.mean(stable.values()) for stable in all_labels]))
 print 'mean of class is ', np.mean(all_classes)
 
-filename = '_'.join(('data/dataset', str(num_piles), str(max_num_blocks), str(recog_noise), str(image_size), str(label_size)))
+filename = '_'.join(('data/dataset_multi', str(num_piles), str(max_num_blocks), str(recog_noise), str(image_size), str(label_size)))
 filename = filename + '.hdf5'
 f = h5py.File(filename, 'w')
 f.create_dataset('data', data = all_data)

@@ -10,9 +10,10 @@ import numpy as np
 from interval import interval
 import copy
 import multiprocessing
-visual = True
+visual = False
 parallel = False
 import functools
+import cPickle as pickle
 
 if visual:
     pygame.init()
@@ -177,29 +178,139 @@ def smart_rain_maker(space, num_of_blocks=5, block_dim=[100, 40], block_arrangem
                 # body.body_type = pymunk.Body.STATIC
 
 
-def apply_noise_part_B(position_var, num_of_blocks, noise_trials, arg_index):
-    """ Parallel fucntion to be called"""
-    space = pymunk.Space()
-    space.gravity = (0.0, 0.0)
+# def apply_noise_given_blocks(space, noise_trials):
+#     num_of_blocks = len(space.bodies) - 1
+#     for j in range(num_of_blocks):
+#         space_copy = copy.deepcopy(space)
+#         space_copy.gravity = (0.0, 0.0)
+#         temp_array = np.zeros([noise_trials, num_of_blocks])
+#         for k in range(noise_trials):
+#             body_list = space_copy.bodies
+#             shape_list = space_copy.shapes
+#             moving_noise = truncnorm.rvs(-1. / 10., 1. / 10., size=1) * (
+#                 shape_list[1].bb.right - shape_list[1].bb.left)
+#             body_list[j].position = [body_list[j].position[0] + moving_noise, body_list[j].position[1]]
+#             space_copy.reindex_shapes_for_body(body_list[j])
+#             space_copy.gravity = (0.0, -900)
+#             space_copy.step(1 / 50.)
+#
+#             for block in body_list:
+#                 if block.angular_velocity > 0.01:
+#                     temp_array[k, j] = 1.
+#             for l in range(1, len(body_list)):
+#                 space_copy.remove(body_list[l])
+#                 space_copy.remove(shape_list[l])
+#             space_copy.gravity = (0.0, 0.0)
+#             if visual:
+#                 screen.fill((255, 255, 255))
+#                 # space.debug_draw(draw_options)
+#                 clock.tick(50)
+#                 pygame.display.flip()
+#             space_copy.step(1 / 50.0)
+#     return temp_array
+
+
+def is_stable_func(position_var, num_of_blocks, noise_trials, space, arg_index):
+    if space is None:
+        space = pymunk.Space()
+        space.gravity = (0.0, 0.0)
     position_noise_list = truncnorm.rvs(- 1. / (position_var), 1. / (position_var), size=num_of_blocks)
     hor_ver_list = np.random.binomial(2, 0.5, num_of_blocks)
     temp_array = np.zeros([noise_trials, num_of_blocks])
+    is_unstable = dict()
+    body_list, shape_list = smart_rain_maker(space, position_noise_list=position_noise_list,
+                                             hor_ver_list=hor_ver_list,
+                                             num_of_blocks=num_of_blocks, block_dim=[100, 40], var=1.,
+                                             base_coord=[(0., 100.), (600., 100.)], base_width=10, mass=1)
+    moving_noise = truncnorm.rvs(-1. / 20., 1. / 20., size=1) * (
+        shape_list[1].bb.right - shape_list[1].bb.left)
+    old_positions = [block.position for block in body_list]
+    space.gravity = (0.0, -900.)
+    if visual:
+        draw_options \
+            = pygame_util.DrawOptions(screen)
+    for lk in range(100):
+        if visual:
+            space.debug_draw(draw_options)
+            clock.tick(50)
+            pygame.display.flip()
+        space.step(1 / 50.)
+        if visual:
+            screen.fill((255, 255, 255))
+    for b_ind in range(1, len(body_list)):
+        if abs(body_list[b_ind].position[1] - old_positions[b_ind][1]) > 10:
+            # print block.angular_velocity
+            is_unstable[tuple(body_list[b_ind].position)] = 1.
+        else:
+            is_unstable[tuple(body_list[b_ind].position)] = 0.
+        if visual:
+            screen.fill((255, 255, 255))
+            # space.debug_draw(draw_options)
+            clock.tick(50)
+            pygame.display.flip()
+        space.step(1 / 50.0)
+    # return temp_array
+    # the following line is temporary just for returning stablity
+    return is_unstable
+
+
+def apply_noise_part_B(position_var, num_of_blocks, noise_trials, space, arg_index):
+    """ Parallel fucntion to be called"""
+    if space is None:
+        space = pymunk.Space()
+        space.gravity = (0.0, 0.0)
+    position_noise_list = truncnorm.rvs(- 1. / (position_var), 1. / (position_var), size=num_of_blocks)
+    hor_ver_list = np.random.binomial(2, 0.5, num_of_blocks)
+    temp_array = np.zeros([noise_trials, num_of_blocks])
+    is_unstable = np.zeros(num_of_blocks)
     for j in range(num_of_blocks):
         for k in range(noise_trials):
             body_list, shape_list = smart_rain_maker(space, position_noise_list=position_noise_list,
                                                      hor_ver_list=hor_ver_list,
                                                      num_of_blocks=num_of_blocks, block_dim=[100, 40], var=1.,
                                                      base_coord=[(0., 100.), (600., 100.)], base_width=10, mass=1)
-            moving_noise = truncnorm.rvs(-1. / 10., 1. / 10., size=1) * (
+            moving_noise = truncnorm.rvs(-1. / 20., 1. / 20., size=1) * (
                 shape_list[1].bb.right - shape_list[1].bb.left)
-            body_list[j].position = [body_list[j].position[0] + moving_noise, body_list[j].position[1]]
-            space.reindex_shapes_for_body(body_list[j])
-            space.gravity = (0.0, -900)
-            space.step(1 / 50.)
 
-            for block in body_list:
-                if block.angular_velocity > 0.01:
+            # body_list[j].position = [body_list[j].position[0] + moving_noise , body_list[j].position[1]]
+            space.reindex_shapes_for_body(body_list[j])
+            body_left = shape_list[j].bb.left
+            body_right = shape_list[j].bb.right
+            body_top = shape_list[j].bb.top
+            body_bottom = shape_list[j].bb.bottom
+
+            # print 'length ',len(shape_list)
+            # for counter in range(len(shape_list)):
+            #     print shape_list[counter].bb.right - shape_list[counter].bb.left
+            # real_BB = pymunk.BB([body_left, body_bottom, body_right, body_top])
+            # while j>0 and (real_BB.intersects_segment((body_left, body_bottom), (body_right, body_top)) or \
+            #         shape_list[j].bb.intersects_segment((body_left, body_top), (body_right, body_bottom))):
+            #     body_list[j].position = [body_list[j].position[0] - moving_noise, body_list[j].position[1]]
+            #     space.reindex_shapes_for_body(body_list[j])
+            #     moving_noise = truncnorm.rvs(-1. / 10., 1. / 10., size=1) * (
+            #         shape_list[1].bb.right - shape_list[1].bb.left)
+            #     body_list[j].position = [body_list[j].position[0] + moving_noise, body_list[j].position[1]]
+            #     space.reindex_shapes_for_body(body_list[j])
+
+            old_positions = [block.position for block in body_list]
+            space.gravity = (0.0, -900.)
+            for i in range(50):
+                space.step(1/50.)
+
+            if visual:
+                draw_options = pygame_util.DrawOptions(screen)
+                for lk in range(100):
+                    space.debug_draw(draw_options)
+                    clock.tick(50)
+                    pygame.display.flip()
+                    space.step(1/50.)
+                    screen.fill((255, 255, 255))
+
+            for b_ind in range(len(body_list)):
+                if abs(body_list[b_ind].position[1] - old_positions[b_ind][1]) > 5:
+                    # print block.angular_velocity
                     temp_array[k, j] = 1.
+                    is_unstable[j] = 1.
             for l in range(1, len(body_list)):
                 space.remove(body_list[l])
                 space.remove(shape_list[l])
@@ -210,28 +321,39 @@ def apply_noise_part_B(position_var, num_of_blocks, noise_trials, arg_index):
                 clock.tick(50)
                 pygame.display.flip()
             space.step(1 / 50.0)
-    return temp_array
+    # return temp_array
+    # the following line is temporary just for returning stablity
+    return is_unstable
 
-def apply_noise_part_B_star(position_var, num_of_blocks, noise_trials, arg_index):
-    return apply_noise_part_B(position_var, num_of_blocks, noise_trials, arg_index)
+def apply_noise_part_B_star(position_var, num_of_blocks, noise_trials, space, arg_index):
+    return apply_noise_part_B(position_var, num_of_blocks, noise_trials, space, arg_index)
 
-def apply_noise(block_arrangements_num=3, noise_trials = 3, num_of_blocks = 3, noise_var = 1., position_var=1):
+def apply_noise(block_arrangements_num=50000, noise_trials = 1, num_of_blocks = 9, noise_var = 1., position_var=1, space=None):
     success_array = np.zeros([block_arrangements_num, noise_trials, num_of_blocks])
+    success_list = []
+    if space is None:
+        space = pymunk.Space()
+        space.gravity = (0.0, 0.0)
     if parallel:
-        pool = multiprocessing.Pool(processes=4)
-        func = functools.partial(apply_noise_part_B_star, position_var, num_of_blocks, noise_trials)
+        pool = multiprocessing.Pool(processes=20)
+        space = None
+        func = functools.partial(apply_noise_part_B_star, position_var, num_of_blocks, noise_trials, space)
         m4 = pool.map(func, range(block_arrangements_num))
-        output_list = map(lambda x: x[1], m4)
+        output_list = map(lambda x: x, m4)
         for i in range(block_arrangements_num):
             success_array[i] = output_list[i]
     else:
         for i in range(block_arrangements_num):
-            success_array[i] = apply_noise_part_B(position_var, num_of_blocks, noise_trials, i)
-    return success_array
+            # the following two lines is temporary just for generating stable/unstable piles
+            space = pymunk.Space()
+            space.gravity = (0.0, 0.0)
+            # success_array[i] = apply_noise_part_B(position_var, num_of_blocks, noise_trials, space, i)
+            success_list.append(is_stable_func(position_var, num_of_blocks, noise_trials, space, i))
 
-
-print apply_noise()
-
+    return success_list
+data_list = apply_noise()
+f = open('/Users/naji/naji2.pickle', 'w')
+pickle.dump(data_list, f)
 
 
 
