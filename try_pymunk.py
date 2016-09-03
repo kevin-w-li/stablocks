@@ -227,7 +227,8 @@ def is_stable_func(position_var, num_of_blocks, noise_trials, space, arg_index):
     old_positions = [block.position for block in body_list]
     space.gravity = (0.0, -900.)
     if visual:
-        draw_options = pygame_util.DrawOptions(screen)
+        draw_options \
+            = pygame_util.DrawOptions(screen)
     for lk in range(100):
         if visual:
             space.debug_draw(draw_options)
@@ -236,12 +237,12 @@ def is_stable_func(position_var, num_of_blocks, noise_trials, space, arg_index):
         space.step(1 / 50.)
         if visual:
             screen.fill((255, 255, 255))
-    for b_ind in range(len(body_list)):
-        if abs(body_list[b_ind+1].position[1] - old_positions[b_ind+1][1]) > 10:
+    for b_ind in range(1, len(body_list)):
+        if abs(body_list[b_ind].position[1] - old_positions[b_ind][1]) > 10:
             # print block.angular_velocity
-            is_unstable[tuple(body_list[b_ind+1].position)] = 1.
+            is_unstable[tuple(body_list[b_ind].position)] = 1.
         else:
-            is_unstable[tuple(body_list[b_ind+1].position)] = 0.
+            is_unstable[tuple(body_list[b_ind].position)] = 0.
         if visual:
             screen.fill((255, 255, 255))
             # space.debug_draw(draw_options)
@@ -351,7 +352,7 @@ def apply_noise(block_arrangements_num=50000, noise_trials = 1, num_of_blocks = 
 
     return success_list
 data_list = apply_noise()
-f = open('/Users/naji/naji.pickle', 'w')
+f = open('/Users/naji/naji2.pickle', 'w')
 pickle.dump(data_list, f)
 
 
