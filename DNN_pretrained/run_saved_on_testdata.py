@@ -44,7 +44,7 @@ flags.DEFINE_integer('num_images', 50000, 'number of images')
 flags.DEFINE_integer('train_size', 900, 'number of images')
 flags.DEFINE_string('data_file', '../data/dataset_50000_5_5_227_50.hdf5', 'path to data file')
 flags.DEFINE_string('exp_name', 'heatmap_dataset_50000_5_5_227_50_copy', 'used for finding the model of the run experiment')
-
+flags.DEFINE_boolean('read_direct', True, 'if reading directly from a test dataset and not generating from the all data points')
 ################################################################################
 
 
@@ -231,6 +231,7 @@ def test_DNN_pretrained():
     num_images = images.shape[0]
     images = np.reshape(images, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.image_dim, FLAGS.image_dim,FLAGS.color_channel))
     labels = np.reshape(labels, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.num_gridlines, FLAGS.num_gridlines, 1))
+
     cnn = Alexnet()
     sess = tf.Session()
     init = tf.initialize_all_variables()
