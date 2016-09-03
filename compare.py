@@ -20,6 +20,7 @@ from io_util import *
 import glob
 from copy import deepcopy
 
+plt.rcParams['image.interpolation'] = 'nearest'
 display_size = 1000
 image_size = 227
 all_subjects = []
@@ -44,24 +45,32 @@ for exp in exps:
             all_mean_resps[exp_key][ti][coords] /= len(all_subjects)
 print all_mean_resps
 
-fig,ax = plt.subplots(3,5)
+
+n_towers = 2
+fig,axes = plt.subplots(3,n_towers*2, figsize = (12,8))
+
 for di, dataset in enumerate(exps):
     
-    data_filename = 'exp/'+dataset+'_data.hdf5'
     space_filename = 'exp/'+dataset+'_space'
-    resp_filename = 'exp/resp/real/09-01-20-22'
         
-    f = h5py.File(data_filename, 'r')
     spaces, _ = load_space(space_filename)
-    for si, space in enumerate(spaces[:5]):
-        ax = ax[di, si]
+    for si, space in enumerate(spaces[:n_towers]):
+        ax = axes[di, 2*si]
         plt_options = pymunk.matplotlib_util.DrawOptions(ax)
         ax.set(adjustable='box-forced', aspect=1, xlim=(0,display_size), ylim=(0, display_size))
-        ax.set_axis_off()
-        new_space = copy_space(space)
-        plot_space(space, display_size, image_size)
-        block_labels = simulate_whole(space, recog_noise = 1., noise_rep = 10, det = True)
-        labeled_data = space_label_to_array(new_space, block_labels, display_size, image_size, fig, ax, plt_options)
+        plot_space(space, display_size, image_size, fig = fig, ax = ax, plt_options = plt_options)
+        # ax.set_axis_off()
+
+        ax = axes[di, 2*si+1]
+        plt_options = pymunk.matplotlib_util.DrawOptions(ax)
+        ax.set(adjustable='box-forced', aspect=1, xlim=(0,display_size), ylim=(0, display_size))
+        new_space, _ = copy_space(space)
+        block_labels = simulate_whole(space, recog_noise = 1., noise_rep = 1, det = True)
+        # block_labels_arr = np.asarray([value for value in block_labels)
+
+        labeled_data = plot_space_label(space, block_labels, display_size, image_size, fig = fig, ax = ax, plt_options = plt_options)
+        # ax.set_axis_off()
+plt.show()
 raise
 sim_labels = simulate_whole(spaces[1])
 

@@ -67,6 +67,7 @@ def plot_space_label(space,label, display_size, image_size, fig=None, ax=None, p
         plt_options = pymunk.matplotlib_util.DrawOptions(ax)
     data = space_label_to_array(space, label, display_size, image_size)
     ax.imshow(data, cmap = plt.get_cmap('gray'), vmin = 0, vmax = 1 )
+    ax.invert_yaxis()
 
 def plot_space(space, display_size, image_size, fig=None, ax=None, plt_options=None):
 
