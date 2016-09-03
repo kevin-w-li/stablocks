@@ -6,8 +6,9 @@ from matplotlib import pyplot as plt
 import pygame
 from pygame.locals import *
 import pymunkoptions
+
 pymunkoptions.options["debug"] = False
-import pymunk #1
+import pymunk  # 1
 from pymunk import pygame_util
 from pymunk import matplotlib_util
 from shapes import *
@@ -26,11 +27,11 @@ display_size = 1000
 image_size = 227
 all_subjects = []
 resp_files = glob.glob("./exp/resp/real/0*")
-exps = ['exp_50_5_3', 'exp_50_7_3', 'exp_30_10_3' ]
+exps = ['exp_50_5_3', 'exp_50_7_3', 'exp_multi_30']
 for fn in resp_files:
     data_dict = load_data(fn)
     # checking whether the data is old one dimensional or multipile and only appending one dimensional data
-    if 'exp_30_10_3_space' in data_dict.keys():
+    if not('exp_30_10_3_space'  in data_dict.keys()):
         all_subjects.append(load_data(fn))
 all_mean_resps = deepcopy(all_subjects[0])
 all_resps = deepcopy(all_subjects[0])
@@ -66,31 +67,31 @@ for exp in exps:
 n_towers = 2
 visual = False
 if visual:
-    fig, axes = plt.subplots(3,n_towers*2, figsize = (12, 8))
+    fig, axes = plt.subplots(3, n_towers * 2, figsize=(12, 8))
 
 for di, dataset in enumerate(exps):
-    
-    space_filename = 'exp/'+dataset+'_space'
-        
+
+    space_filename = 'exp/' + dataset + '_space'
+
     spaces, _ = load_space(space_filename)
     for si, space in enumerate(spaces):
         if visual:
-            ax = axes[di, 2*si]
+            ax = axes[di, 2 * si]
             plt_options = pymunk.matplotlib_util.DrawOptions(ax)
-            ax.set(adjustable='box-forced', aspect=1, xlim=(0,display_size), ylim=(0, display_size))
-            plot_space(space, display_size, image_size, fig = fig, ax = ax, plt_options = plt_options)
-        # ax.set_axis_off()
+            ax.set(adjustable='box-forced', aspect=1, xlim=(0, display_size), ylim=(0, display_size))
+            plot_space(space, display_size, image_size, fig=fig, ax=ax, plt_options=plt_options)
+            # ax.set_axis_off()
 
-            ax = axes[di, 2*si+1]
+            ax = axes[di, 2 * si + 1]
             plt_options = pymunk.matplotlib_util.DrawOptions(ax)
-            ax.set(adjustable='box-forced', aspect=1, xlim=(0,display_size), ylim=(0, display_size))
+            ax.set(adjustable='box-forced', aspect=1, xlim=(0, display_size), ylim=(0, display_size))
         new_space, _ = copy_space(space)
-        block_labels = simulate_whole(space, recog_noise = 1., noise_rep = 1, det = True)
-        print block_labels
+        block_labels = simulate_whole(space, recog_noise=1., noise_rep=1, det=True)
         # block_labels_arr = np.asarray([value for value in block_labels)
         block_avg = np.mean(np.asarray([block_labels.values()]))
         if visual:
-            labeled_data = plot_space_label(space, block_labels, display_size, image_size, fig = fig, ax = ax, plt_options = plt_options)
+            labeled_data = plot_space_label(space, block_labels, display_size, image_size, fig=fig, ax=ax,
+                                            plt_options=plt_options)
         model_average_given_conf[dataset].append(block_avg)
         # ax.set_axis_off()
 
@@ -98,15 +99,19 @@ if visual:
     plt.show()
 print human_average_given_conf
 print model_average_given_conf
-fig, ax = plt.subplots(3,1)
+fig, ax = plt.subplots(3, figsize=(3,10))
+plt.rcParams.update({'font.size': 10})
+plt.rc('text', usetex=True)
+
 for i, exp in enumerate(exps):
-    ax[i].scatter(human_average_given_conf[exp], model_average_given_conf[exp])
+    ax[i].scatter(human_average_given_conf[exp], model_average_given_conf[exp], marker='+')
+    ax[i].set(adjustable='box-forced', aspect=1, xlim=(0, 1), ylim=(0, 1))
+    ax[i].set_xlabel(r'$\rm{Human}$')
+    ax[i].set_ylabel(r'$\rm{Truth}$')
     # ax[i].plot(human_average_given_conf[exp], 'r')
     # ax[i].plot(model_average_given_conf[exp], 'b')
-
+plt.tight_layout()
 plt.show()
-
-
 
 raise
 sim_labels = simulate_whole(spaces[1])
@@ -114,9 +119,6 @@ sim_labels = simulate_whole(spaces[1])
 num_blocks = len(spaces)
 recog_noise = 5
 num_slices = 100
-
-
-
 
 # neural nets
 '''
@@ -132,23 +134,27 @@ for i in range(5):
 plt.show()
 
 '''
-fig,ax = plt.subplots(1, figsize = (6,6))
+fig, ax = plt.subplots(1, figsize=(6, 6))
 plt_options = pymunk.matplotlib_util.DrawOptions(ax)
-ax.set(adjustable='box-forced', aspect=1, xlim=(0,display_size), ylim=(0, display_size))
+ax.set(adjustable='box-forced', aspect=1, xlim=(0, display_size), ylim=(0, display_size))
 ax.set_axis_off()
+
 
 def process_one(n_above, space):
     map(lambda p: p.remove(), filter(lambda c: isinstance(c, mpl.patches.Polygon), ax.get_children()))
     blocks = sort_pile(space.shapes)
 
-    plane_heights, level_labels, det_level_labels = combined_center_of_mass(blocks, recog_noise = recog_noise, n_above = n_above)
-    
+    plane_heights, level_labels, det_level_labels = combined_center_of_mass(blocks, recog_noise=recog_noise,
+                                                                            n_above=n_above)
+
     block_labels = labels_to_block_labels(blocks, plane_heights, level_labels)
     return block_labels
 
+
 from functools import partial
+
 probs = []
-for p in [1,3,5]:
+for p in [1, 3, 5]:
     process_one_param = partial(process_one, p)
     all_labels = map(process_one_param, spaces)
     probs.append([v for d in all_labels for v in d.values()])
@@ -157,7 +163,7 @@ sim_labels = []
 det_labels = []
 for space in spaces:
     sim_labels.append(simulate_whole(space))
-    det_labels.append(simulate_whole(space, det = True))
+    det_labels.append(simulate_whole(space, det=True))
 probs.append([v for d in sim_labels for v in d.values()])
 probs.append([v for d in det_labels for v in d.values()])
 probs.append([v for d in choices for v in d.values()])
