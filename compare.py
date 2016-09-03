@@ -19,16 +19,30 @@ import h5py
 from io_util import *
 import glob
 from copy import deepcopy
+import os
 
+plt.rcParams['image.interpolation'] = 'nearest'
 display_size = 1000
 image_size = 227
 all_subjects = []
 resp_files = glob.glob("./exp/resp/real/0*")
 exps = ['exp_50_5_3', 'exp_50_7_3', 'exp_30_10_3' ]
 for fn in resp_files:
-    all_subjects.append(load_data(fn))
+    data_dict = load_data(fn)
+    # checking whether the data is old one dimensional or multipile and only appending one dimensional data
+    if 'exp_30_10_3_space' in data_dict.keys():
+        all_subjects.append(load_data(fn))
 all_mean_resps = deepcopy(all_subjects[0])
 all_resps = deepcopy(all_subjects[0])
+human_average_given_conf = dict()
+model_average_given_conf = dict()
+true_average_given_conf = dict()
+
+for exp in exps:
+    human_average_given_conf[exp] = []
+    model_average_given_conf[exp] = []
+    true_average_given_conf[exp] = []
+
 for exp in exps:
     exp_key = exp + '_space'
     for ti, towers in enumerate(all_mean_resps[exp_key]):
@@ -42,32 +56,67 @@ for exp in exps:
                 all_mean_resps[exp_key][ti][coords] += r
                 all_resps[exp_key][ti][coords].append(r)
             all_mean_resps[exp_key][ti][coords] /= len(all_subjects)
-print all_mean_resps
+        counter = 0
+        temp = 0
+        for coords in towers['choices']:
+            counter += 1
+            temp += all_mean_resps[exp_key][ti][coords]
+        human_average_given_conf[exp].append(temp / float(counter))
 
-fig,ax = plt.subplots(3,5)
+n_towers = 2
+visual = False
+if visual:
+    fig, axes = plt.subplots(3,n_towers*2, figsize = (12, 8))
+
 for di, dataset in enumerate(exps):
     
-    data_filename = 'exp/'+dataset+'_data.hdf5'
     space_filename = 'exp/'+dataset+'_space'
-    resp_filename = 'exp/resp/real/09-01-20-22'
         
-    f = h5py.File(data_filename, 'r')
     spaces, _ = load_space(space_filename)
-    for si, space in enumerate(spaces[:5]):
-        ax = ax[di, si]
-        plt_options = pymunk.matplotlib_util.DrawOptions(ax)
-        ax.set(adjustable='box-forced', aspect=1, xlim=(0,display_size), ylim=(0, display_size))
-        ax.set_axis_off()
-        new_space = copy_space(space)
-        plot_space(space, display_size, image_size)
-        block_labels = simulate_whole(space, recog_noise = 1., noise_rep = 10, det = True)
-        labeled_data = space_label_to_array(new_space, block_labels, display_size, image_size, fig, ax, plt_options)
+    for si, space in enumerate(spaces):
+        if visual:
+            ax = axes[di, 2*si]
+            plt_options = pymunk.matplotlib_util.DrawOptions(ax)
+            ax.set(adjustable='box-forced', aspect=1, xlim=(0,display_size), ylim=(0, display_size))
+            plot_space(space, display_size, image_size, fig = fig, ax = ax, plt_options = plt_options)
+        # ax.set_axis_off()
+
+            ax = axes[di, 2*si+1]
+            plt_options = pymunk.matplotlib_util.DrawOptions(ax)
+            ax.set(adjustable='box-forced', aspect=1, xlim=(0,display_size), ylim=(0, display_size))
+        new_space, _ = copy_space(space)
+        block_labels = simulate_whole(space, recog_noise = 1., noise_rep = 1, det = True)
+        print block_labels
+        # block_labels_arr = np.asarray([value for value in block_labels)
+        block_avg = np.mean(np.asarray([block_labels.values()]))
+        if visual:
+            labeled_data = plot_space_label(space, block_labels, display_size, image_size, fig = fig, ax = ax, plt_options = plt_options)
+        model_average_given_conf[dataset].append(block_avg)
+        # ax.set_axis_off()
+
+if visual:
+    plt.show()
+print human_average_given_conf
+print model_average_given_conf
+fig, ax = plt.subplots(3,1)
+for i, exp in enumerate(exps):
+    # ax[i].scatter(human_average_given_conf[exp], model_average_given_conf[exp])
+    ax[i].plot(human_average_given_conf[exp], 'r')
+    ax[i].plot(model_average_given_conf[exp], 'b')
+
+plt.show()
+
+
+
 raise
 sim_labels = simulate_whole(spaces[1])
 
 num_blocks = len(spaces)
 recog_noise = 5
 num_slices = 100
+
+
+
 
 # neural nets
 '''
