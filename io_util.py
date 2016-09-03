@@ -234,7 +234,6 @@ def load_data(resp_filename):
         for ci,c in enumerate(choices):
             for bi, v in c.items():
                 choices[ci][bi] = float(v)
-            gt
     return resps
 
 
