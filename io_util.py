@@ -9,11 +9,17 @@ import cPickle as pkl
 from shapes import sort_pile
 from collections import OrderedDict
 
-def space_to_array(space, display_size, image_size, fig, ax, plt_options):
+def space_to_array(space, display_size, image_size, fig = None, ax = None, plt_options = None):
 
     # space: pymunk space that contains shapes
     # display_size: display size that is used in space
     # image_size: size of the image data
+
+    if fig is None:
+        fig, ax = plt.subplots()
+        ax.set(adjustable='box-forced', aspect=1, xlim=(0,display_size), ylim=(0, display_size))
+        ax.set_axis_off()
+        plt_options = pymunk.matplotlib_util.DrawOptions(ax)
 
     space.debug_draw(plt_options)
     extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
@@ -84,6 +90,7 @@ def plot_space(space, display_size, image_size, fig=None, ax=None, plt_options=N
     ax.set(adjustable='box-forced', aspect=1, xlim=(0,display_size), ylim=(0,display_size))
     plt_options = pymunk.matplotlib_util.DrawOptions(ax)
     space.debug_draw(plt_options)
+    plt.show()
     extent = ax.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
     buf = io.BytesIO()
     fig.savefig(buf, format='png', bbox_inches=extent)
@@ -227,4 +234,7 @@ def load_data(resp_filename):
         for ci,c in enumerate(choices):
             for bi, v in c.items():
                 choices[ci][bi] = float(v)
+            gt
     return resps
+
+
