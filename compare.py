@@ -52,12 +52,15 @@ fig,axes = plt.subplots(3,n_towers*2, figsize = (12,8))
 for di, dataset in enumerate(exps):
     
     space_filename = 'exp/'+dataset+'_space'
-        
     spaces, _ = load_space(space_filename)
+
     for si, space in enumerate(spaces[:n_towers]):
         ax = axes[di, 2*si]
         plt_options = pymunk.matplotlib_util.DrawOptions(ax)
         ax.set(adjustable='box-forced', aspect=1, xlim=(0,display_size), ylim=(0, display_size))
+        data = space_to_array(space, display_size, image_size, fig, ax, plt_options)
+        plt.imshow(data)
+        plt.show()
         plot_space(space, display_size, image_size, fig = fig, ax = ax, plt_options = plt_options)
         # ax.set_axis_off()
 
@@ -71,7 +74,7 @@ for di, dataset in enumerate(exps):
         labeled_data = plot_space_label(space, block_labels, display_size, image_size, fig = fig, ax = ax, plt_options = plt_options)
         # ax.set_axis_off()
 plt.show()
-raise
+
 sim_labels = simulate_whole(spaces[1])
 
 num_blocks = len(spaces)
@@ -124,6 +127,3 @@ probs.append([v for d in choices for v in d.values()])
 probs = np.array(probs)
 
 print np.corrcoef(probs)
-
-
-
