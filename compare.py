@@ -19,15 +19,21 @@ import h5py
 from io_util import *
 import glob
 from copy import deepcopy
+import os
 
 plt.rcParams['image.interpolation'] = 'nearest'
 display_size = 1000
-image_size = 227
+image_size = 1000
 all_subjects = []
 resp_files = glob.glob("./exp/resp/real/0*")
 exps = ['exp_50_5_3', 'exp_50_7_3', 'exp_30_10_3' ]
+exps_keys = [s+'_space' for s in exps]
 for fn in resp_files:
-    all_subjects.append(load_data(fn))
+    data_dict = load_data(fn)
+    # checking whether the data is old one dimensional or multipile and only appending one dimensional data
+    #<F4>print data_dict.keys()
+    if 'exp_30_10_3_space' in data_dict.keys():
+        all_subjects.append(load_data(fn))
 all_mean_resps = deepcopy(all_subjects[0])
 all_resps = deepcopy(all_subjects[0])
 for exp in exps:
@@ -47,31 +53,36 @@ print all_mean_resps
 
 
 n_towers = 2
-fig,axes = plt.subplots(3,n_towers*2, figsize = (12,8))
-
+fig,axes = plt.subplots(3,n_towers*3, figsize = (12,8))
+visual = True
 for di, dataset in enumerate(exps):
     
     space_filename = 'exp/'+dataset+'_space'
     spaces, _ = load_space(space_filename)
 
     for si, space in enumerate(spaces[:n_towers]):
-        ax = axes[di, 2*si]
-        plt_options = pymunk.matplotlib_util.DrawOptions(ax)
-        ax.set(adjustable='box-forced', aspect=1, xlim=(0,display_size), ylim=(0, display_size))
-        data = space_to_array(space, display_size, image_size, fig, ax, plt_options)
-        plt.imshow(data)
-        plt.show()
-        plot_space(space, display_size, image_size, fig = fig, ax = ax, plt_options = plt_options)
-        # ax.set_axis_off()
+        if visual:
+            ax = axes[di, 3*si]
+            ax.set(adjustable='box-forced', aspect=1, xlim=(0,display_size), ylim=(0, display_size))
+            data = space_to_array(space, display_size, image_size)
+            ax.imshow(data); ax.invert_yaxis(); ax.set_axis_off()
 
-        ax = axes[di, 2*si+1]
-        plt_options = pymunk.matplotlib_util.DrawOptions(ax)
-        ax.set(adjustable='box-forced', aspect=1, xlim=(0,display_size), ylim=(0, display_size))
-        new_space, _ = copy_space(space)
-        block_labels = simulate_whole(space, recog_noise = 1., noise_rep = 1, det = True)
-        # block_labels_arr = np.asarray([value for value in block_labels)
+            ax = axes[di, 3*si+1]
+            ax.set(adjustable='box-forced', aspect=1, xlim=(0,display_size), ylim=(0, display_size))
+            block_labels = simulate_whole(space, recog_noise = 1., noise_rep = 1, det = True)
+            # block_labels_arr = np.asarray([value for value in block_labels)
+            labeled_data = space_label_to_array(space, block_labels, display_size, image_size)
+            ax.imshow(labeled_data, cmap = 'gray'); ax.invert_yaxis(); ax.set_axis_off()
 
-        labeled_data = plot_space_label(space, block_labels, display_size, image_size, fig = fig, ax = ax, plt_options = plt_options)
+            ax = axes[di, 3*si+2]
+            ax.set(adjustable='box-forced', aspect=1, xlim=(0,display_size), ylim=(0, display_size))
+            human_labels = all_mean_resps[exps_keys[di]][si]
+            human_labels
+            print human_labels
+            # block_labels_arr = np.asarray([value for value in block_labels)
+            labeled_data = space_label_to_array(space, human_labels, display_size, image_size)
+            ax.imshow(labeled_data, cmap = 'gray'); ax.invert_yaxis(); ax.set_axis_off()
+
         # ax.set_axis_off()
 plt.show()
 
