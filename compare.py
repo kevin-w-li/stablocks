@@ -49,24 +49,55 @@ npe_average_given_conf = dict()
 nn_average_given_conf = dict()
 cog_average_given_conf = dict()
 
-
+# making dictionaries for the stabel unstable values of each configuration
+stable_unstable_human = dict()
+stable_unstable_noisy = dict()
+stable_unstable_nn_max = dict()
+stable_unstable_nn_add = dict()
+stable_unstable_nn_first = dict()
+stable_unstable_truth = dict()
 
 for exp in exps:
     human_average_given_conf[exp] = []
     truth_average_given_conf[exp] = []
 
+    # making dictionaries for the stabel unstable values of each configuration
+    stable_unstable_nn_max[exp] = []
+    stable_unstable_nn_add[exp] = []
+    stable_unstable_nn_first[exp] = []
+    stable_unstable_human[exp] = []
+    stable_unstable_noisy[exp] = []
+    stable_unstable_truth[exp] = []
+
 for exp in exps:
     for ti, towers in enumerate(all_mean_resps[exp]):
+        # generating the structure for stable/unstable lists using this for loop
+        stable_unstable_nn_max[exp].append(0)
+        stable_unstable_nn_add[exp].append(0)
+        stable_unstable_nn_first[exp].append(0)
+
+        stable_unstable_human[exp].append(0)
+        stable_unstable_noisy[exp].append(0)
+
         del all_mean_resps[exp][ti]['seq']
         all_mean_resps[exp][ti] = all_mean_resps[exp][ti]['choices']
         for coords in towers['choices']:
             all_mean_resps[exp][ti][coords] = 0.0
             all_resps[exp][ti][coords] = []
+            # flag for checking a tower is stable for subject
+            is_tower_stable = [True for x in range(len(all_subjects))]
+            subject_counter = 0
             for subject in all_subjects:
                 r = subject[exp][ti]['choices'][coords]
+                # checking whether the tower is stable for a given subject
+                if is_tower_stable[subject_counter] and r > 0:
+                    stable_unstable_human[exp][ti] += 1.
+                    is_tower_stable[subject_counter] = False
                 all_mean_resps[exp][ti][coords] += r
                 all_resps[exp][ti][coords].append(r)
+                subject_counter += 1
             all_mean_resps[exp][ti][coords] /= len(all_subjects)
+            stable_unstable_human[exp][ti] /= len(all_subjects)
         counter = 0
         temp = 0
         for coords in towers['choices']:
@@ -88,14 +119,15 @@ all_true_resps = deepcopy(all_mean_resps)
 all_nn_resps = deepcopy(all_mean_resps)
 all_npe_resps = deepcopy(all_mean_resps)
 all_cog_resps = deepcopy(all_mean_resps)
-all_human_resps = all_mean_resps 
+all_human_resps = all_mean_resps
+
 
 for di, exp in enumerate(exps):
-    
+
     space_filename = 'exp/'+exp+'_space'
     spaces, _ = load_space(space_filename)
     for si, space in enumerate(spaces):
-        print [di, si] 
+        # print [di, si]
         # ground truth data
         true_labels = sim_block_labels[exp][si]
         # data, true_labeled_data = space_label_to_array(space, true_labels, display_size, image_size, label_size)
@@ -103,9 +135,17 @@ for di, exp in enumerate(exps):
         # truth_average_given_conf[exp].append(block_avg)
         all_true_resps[exp][si] = true_labels
 
+        # checking stability for the ground truth
+        stable_unstable_truth[exp].append(float(bool(np.prod(true_labels.values()))))
+        if float(bool(np.prod(true_labels.values()))) == 1:
+            print "this is stable!!!"
         human_labels = all_mean_resps[exp][si]
         # human_labeled_data = space_label_to_array(space, human_labels, display_size, image_size, label_size)[1]
         npe_labels, npe_stable = simulate_whole(space, recog_noise = recog_noise, noise_rep = 2, det = False)
+
+        #setting stable unstable with summing and thresholding of real outputs
+        stable_unstable_noisy[exp][si] = npe_stable
+
         # npe_labeled_data = space_label_to_array(space, npe_labels, display_size, image_size, label_size)[1]
         all_npe_resps[exp][si] = npe_labels
 
@@ -113,6 +153,9 @@ for di, exp in enumerate(exps):
         nn_labels = space_array_to_label(space, display_size, probmap)
         # nn_labeled_data = space_label_to_array(space, nn_labels, display_size, image_size, label_size)[1]
         all_nn_resps[exp][si] = nn_labels
+        stable_unstable_nn_add[exp][si] = np.sum(all_nn_resps[exp][si].values())
+        stable_unstable_nn_max[exp][si] = np.max(all_nn_resps[exp][si].values())
+        stable_unstable_nn_first[exp][si] = all_nn_resps[exp][si].values()[-1]
 
         n_above = 2
         blocks = sort_pile(space.shapes)
@@ -125,7 +168,7 @@ for di, exp in enumerate(exps):
             # tower
             ax = axes[0, n_towers*di+si]
             ax.set(adjustable='box-forced', aspect=1, xlim=(0+300,display_size-300), ylim=(0, display_size))
-            ax.imshow(data); ax.invert_yaxis(); ax.set_axis_off(); 
+            ax.imshow(data); ax.invert_yaxis(); ax.set_axis_off();
             if si == 0: ax.set_ylabel('tower')
 
             # truth
@@ -163,7 +206,10 @@ nn_average_given_conf = num_falling_blocks(all_nn_resps)
 cog_average_given_conf = num_falling_blocks(all_cog_resps)
 if visual:
     plt.show()
+fig_stable_unstable, axes_stable_unstable = plt.subplots(5,3, figsize=(10,8))
 fig, axes = plt.subplots(5,3, figsize=(10,8))
+
+
 ylabels = ['truth', 'PE', 'NN', 'CoG']
 for i, exp in enumerate(exps):
 
@@ -171,12 +217,25 @@ for i, exp in enumerate(exps):
     corr_true = np.corrcoef(human_average_given_conf[exp], truth_average_given_conf[exp])[0,1]
     corr_npe = np.corrcoef(human_average_given_conf[exp], npe_average_given_conf[exp])[0,1]
     corr_nn = np.corrcoef(human_average_given_conf[exp], nn_average_given_conf[exp])[0,1]
-    corr_nn = np.corrcoef(human_average_given_conf[exp], cog_average_given_conf[exp])[0,1]
+    corr_cog = np.corrcoef(human_average_given_conf[exp], cog_average_given_conf[exp])[0,1]
     axes[0,i].scatter(human_average_given_conf[exp], truth_average_given_conf[exp], c='g')
     axes[0,i].text(0.1,0.9,'\gt')
     axes[1,i].scatter(human_average_given_conf[exp], npe_average_given_conf[exp], c='r')
     axes[2,i].scatter(human_average_given_conf[exp], nn_average_given_conf[exp], c = np.tile([227, 218, 201],(n,1))/255.)
     axes[3,i].scatter(human_average_given_conf[exp], cog_average_given_conf[exp], c = np.tile([77, 0, 75],(n,1))/255.)
+
+    axes[0, i].set_xlabel(r'$\rm{Human}$')
+    axes[0, i].set_ylabel(r'$\rm{Truth}$')
+    axes[1, i].set_xlabel(r'$\rm{Human}$')
+    axes[1, i].set_ylabel(r'$\rm{Truth}$')
+    axes[2, i].set_xlabel(r'$\rm{Human}$')
+    axes[2, i].set_ylabel(r'$\rm{Truth}$')
+
+    axes_stable_unstable[0, i].scatter(stable_unstable_human[exp], stable_unstable_truth[exp], c='g', marker = '+')
+    axes_stable_unstable[1, i].scatter(human_average_given_conf[exp], stable_unstable_noisy[exp], c='r')
+    axes_stable_unstable[2, i].scatter(human_average_given_conf[exp], stable_unstable_nn_max[exp], c='y')
+    axes_stable_unstable[3, i].scatter(human_average_given_conf[exp], stable_unstable_nn_add[exp], c='b')
+    axes_stable_unstable[4, i].scatter(human_average_given_conf[exp], stable_unstable_nn_first[exp], c='k')
 
     '''
     ax[i].plot(human_average_given_conf[exp], 'r')
@@ -187,8 +246,9 @@ for i, exp in enumerate(exps):
     if i == 0:
         map(lambda j: axes[j,i].set(ylabel=ylabels[j]), range(len(ylabels)))
     map(lambda ax: ax.set(xticklabels=[]), axes[:-1,i])
-map(lambda ax: map(lambda a: a.set(adjustable='box-forced', aspect=1, xlim=(0, 1), ylim=(0,1)), ax), axes)
+map(lambda ax: map(lambda a: a.set(adjustable='box-forced', aspect=1, xlim=(0, 1.1), ylim=(0,1.1)), ax), axes)
 map(lambda ax: ax.set(xlabel='human'), axes[-1,:])
+plt.tight_layout()
 plt.show()
 
 num_blocks = len(spaces)

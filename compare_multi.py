@@ -105,7 +105,7 @@ plt.rc('text', usetex=True)
 
 for i, exp in enumerate(exps):
     ax[i].scatter(human_average_given_conf[exp], model_average_given_conf[exp], marker='+')
-    ax[i].set(adjustable='box-forced', aspect=1, xlim=(0, 1), ylim=(0, 1))
+    ax[i].set(adjustable='box-forced', aspect=1, xlim=(0, 1.1), ylim=(0, 1.1))
     ax[i].set_xlabel(r'$\rm{Human}$')
     ax[i].set_ylabel(r'$\rm{Truth}$')
     # ax[i].plot(human_average_given_conf[exp], 'r')
