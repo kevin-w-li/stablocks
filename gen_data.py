@@ -62,7 +62,7 @@ def get_one(i):
     '''
     new_space, _ = copy_space(space)
     data = space_to_array(space, display_size, image_size, fig, ax, plt_options)
-    block_labels = simulate_whole(space, recog_noise = recog_noise, noise_rep = 1, det = True)
+    block_labels = simulate_whole(space, recog_noise = recog_noise, noise_rep = 1, det = True)[0]
     labeled_data = space_label_to_array(new_space, block_labels, display_size, label_size, fig, ax, plt_options)
     # print (ax.get_children())
     return (data, labeled_data, block_labels)

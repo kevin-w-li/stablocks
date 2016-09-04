@@ -76,6 +76,10 @@ def simulate_whole(space, recog_noise = 1.0, noise_rep = 30, det = False):
             results[count] = dy<20
             count+=1
     results = results.mean(0)
+    fall = np.all(results,1)
+    fall = fall.mean()
+    print fall
+
     pos = [(p[0],p[1]) for p in pos_copy]
     results = OrderedDict(zip(pos, results))
     reset_space(space, pos_copy)

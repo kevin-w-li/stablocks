@@ -10,6 +10,8 @@ data/*
 */*.npy
 DNN_pretrained/logs/*/*
 exp/*data*
+exp/resp/bad/*
 exp/resp/real/vid*
 vidcap.py
 *vid*
+exp/users_sim_plots*
