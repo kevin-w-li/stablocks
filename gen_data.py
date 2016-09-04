@@ -63,12 +63,12 @@ def get_one(i):
     new_space, _ = copy_space(space)
     data = space_to_array(space, display_size, image_size, fig, ax, plt_options)
     block_labels = simulate_whole(space, recog_noise = recog_noise, noise_rep = 1, det = True)[0]
-    labeled_data = space_label_to_array(new_space, block_labels, display_size, label_size, fig, ax, plt_options)
+    labeled_data = space_label_to_array(new_space, block_labels, display_size, image_size, label_size, fig, ax, plt_options)[1]
     # print (ax.get_children())
     return (data, labeled_data, block_labels)
 
 pool = multiprocessing.Pool(16)
-all_data_slices = pool.map(get_one, range(num_piles))
+all_data_slices = map(get_one, range(num_piles))
 all_data = np.array(map(lambda l:l[0], all_data_slices))
 all_labeled_data = np.array(map(lambda l:l[1], all_data_slices))
 all_labeled_data = np.float32(all_labeled_data>0.95)
