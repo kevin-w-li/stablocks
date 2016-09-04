@@ -39,11 +39,11 @@ FLAGS = flags.FLAGS
 flags.DEFINE_integer('image_dim', 227, 'first dimension of the image; we are assuming a square image')
 flags.DEFINE_integer('color_channel', 3, 'number of color channels')
 flags.DEFINE_integer('num_gridlines', 100, 'number of grid lines')
-flags.DEFINE_integer('num_minibatches', 2000, 'number of minibatches')
-flags.DEFINE_integer('num_images', 100000, 'number of images')
-flags.DEFINE_integer('train_size', 1900, 'number of images')
-flags.DEFINE_string('exp_name', 'dataset_multi_100000_12_0_227_100', 'some informative name for the experiment')
-flags.DEFINE_string('data_file', '../data/dataset_multi_100000_12_0_227_100.hdf5', 'path to data file')
+flags.DEFINE_integer('num_minibatches', 30, 'number of minibatches')
+flags.DEFINE_integer('num_images', 30, 'number of images')
+flags.DEFINE_integer('train_size', 0, 'number of images')
+flags.DEFINE_string('exp_name', 'sim_data_label_multi', 'some informative name for the experiment')
+flags.DEFINE_string('data_file', '../data/sim_data_label_multi.hdf5', 'path to data file')
 
 ################################################################################
 
@@ -236,6 +236,8 @@ def test_DNN_pretrained():
     images_fc7 = np.zeros((FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), 4096))
     for batch_i in (range(images.shape[0])):
         print batch_i
+	#plt.imshow(images[batch_i, :, :, :, :].squeeze())
+	#plt.savefig('logs/' + FLAGS.exp_name + '/true_plots/prob_true_'+str(batch_i)+'.png', bbox_inches='tight')
         images_fc7[batch_i, :, :] = sess.run(alx['fc7'], feed_dict={alx['x']:images[batch_i, :, :, :, :]})
 
     alx_hdf_file = h5py.File('../data/alx_'+FLAGS.exp_name, 'w')
@@ -346,7 +348,6 @@ if __name__ == '__main__':
 
 
 ############################################# GARBAGE ##############################
-
 
 # def Alexnet(input_shape=[None, FLAGS.image_dim, FLAGS.image_dim, FLAGS.color_channel],
 #             output_shape=[None, FLAGS.num_gridlines]):

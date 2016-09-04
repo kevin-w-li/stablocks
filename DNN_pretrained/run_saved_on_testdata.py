@@ -38,13 +38,13 @@ FLAGS = flags.FLAGS
 
 flags.DEFINE_integer('image_dim', 227, 'first dimension of the image; we are assuming a square image')
 flags.DEFINE_integer('color_channel', 3, 'number of color channels')
-flags.DEFINE_integer('num_gridlines', 50, 'number of grid lines')
-flags.DEFINE_integer('num_minibatches', 64, 'number of minibatches')
-flags.DEFINE_integer('num_images', 64, 'number of images')
+flags.DEFINE_integer('num_gridlines', 100, 'number of grid lines')
+flags.DEFINE_integer('num_minibatches', 30, 'number of minibatches')
+flags.DEFINE_integer('num_images', 30, 'number of images')
 flags.DEFINE_integer('train_size', 0, 'number of images')
-flags.DEFINE_string('exp_name','dataset_60000_5_5_227_50.hdf5', 'used for finding the model of the run experiment')
-flags.DEFINE_string('data_file', 'dataset_64_6_5_227_50.hdf5', 'path to data file')
-flags.DEFINE_string('data_path', '../data/dataset_64_6_5_227_50.hdf5', 'path to data file')
+flags.DEFINE_string('exp_name','dataset_multi_100000_12_0_227_100', 'used for finding the model of the run experiment')
+flags.DEFINE_string('data_file', 'sim_data_label_multi.hdf5', 'path to data file')
+flags.DEFINE_string('data_path', '../data/sim_data_label_multi.hdf5', 'path to data file')
 
 
 ################################################################################
@@ -209,27 +209,27 @@ def Alexnet(input_shape=[None, 4096], input_image_shape =[None, FLAGS.image_dim,
     y = tf.placeholder(tf.float32, output_shape)
     x_image = tf.placeholder(tf.float32, input_image_shape)
 
-    W_regression = weight_variable([4096, 55 * 55])
-    b_regression = bias_variable([55 * 55])
+    W_regression = weight_variable([4096, 60 * 60])
+    b_regression = bias_variable([60 * 60])
     h_regression = tf.nn.relu(tf.matmul(x, W_regression) + b_regression)
 
-    W2_regression = weight_variable([55 * 55, 50 * 50])
-    b2_regression = bias_variable([50 * 50])
+    W2_regression = weight_variable([60 * 60, 100 * 100])
+    b2_regression = bias_variable([100 * 100])
     h2_regression = tf.nn.sigmoid(tf.matmul(h_regression, W2_regression) + b2_regression)
 
     #target_grayscaled = (tf.image.rgb_to_grayscale(target_resized) / 255.)
-    temp_dist = tf.sub(y, tf.reshape(h2_regression, [-1, 50, 50, 1]))
+    temp_dist = tf.sub(y, tf.reshape(h2_regression, [-1, 100, 100, 1]))
     SE = tf.nn.l2_loss(temp_dist)
     MSE = tf.reduce_mean(SE, name='mse')
     return {'cost': MSE, 'y_output': y, 'x_input': x, 'x_input_image': x_image,
-        'y_pred': tf.reshape(h2_regression, [-1, 50, 50, 1]),}
+        'y_pred': tf.reshape(h2_regression, [-1, 100, 100, 1]),}
 
 
 def test_DNN_pretrained():
     aevb_model = 'logs/'+ FLAGS.exp_name + '/-0'
     hdf_file = h5py.File(FLAGS.data_path, 'r')
     images = hdf_file.get('data')
-    labels = hdf_file.get('label')[:,:, :, 0]/255.
+    labels = hdf_file.get('label')[:,:, :]
     num_images = images.shape[0]
     images = np.reshape(images, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.image_dim, FLAGS.image_dim,FLAGS.color_channel))
     labels = np.reshape(labels, (FLAGS.num_minibatches, num_images / float(FLAGS.num_minibatches), FLAGS.num_gridlines, FLAGS.num_gridlines, 1))
@@ -240,7 +240,7 @@ def test_DNN_pretrained():
     saver = tf.train.Saver()
     print('here')
     saver.restore(sess, aevb_model)
-    hdf_file = h5py.File('../data/alx_dataset_64_6_5_227_50' , 'r')
+    hdf_file = h5py.File('../data/alx_sim_data_label_multi' , 'r')
     images_fc7 = hdf_file.get('data')
     train_size = FLAGS.train_size
 
@@ -257,8 +257,9 @@ def test_DNN_pretrained():
     # init = tf.initialize_all_variables()
     #
     # sess.run(init)
-
-
+ 
+    import pickle as pk
+    temp_list = []
     #################################### Testing ########################################
     for batch_i in range(y_test.shape[0]):
         print(batch_i)
@@ -270,12 +271,17 @@ def test_DNN_pretrained():
                                                      cnn['x_input_image']: batch_X_input_images} )[0]
         target = batch_y_output
         fig0, axes0 = plt.subplots(1, 2, squeeze=False, figsize=(10, 5))
-        axes0[0][0].imshow(target[0].squeeze(), aspect='auto', interpolation="nearest", vmin=0, vmax=1)
+	print batch_X_input[0].shape
+        axes0[0][0].imshow(batch_y_output[0].squeeze(), aspect='auto', interpolation="nearest", vmin=0, vmax=1)
         axes0[0][0].set_title('True probs')
         axes0[0][1].imshow(pred_mat.squeeze(), aspect='auto', interpolation="nearest", vmin=0, vmax=1)
+	temp_list.append(pred_mat.squeeze())
+	#pk.dump(temp_list, open('logs/' + FLAGS.exp_name +'/all_results.pk', 'wb'))
+	np.save('logs/' + FLAGS.exp_name + '/plots_runner_test/prob_mat_'+str(batch_i), pred_mat.squeeze())
         axes0[0][1].set_title('Pred probs')
         plt.savefig('logs/' + FLAGS.exp_name + '/plots_runner_test/prob_mat_'+str(batch_i)+'.png', bbox_inches='tight')
 
+    pk.dump(temp_list, open('logs/' + FLAGS.exp_name +'/all_results.pk', 'wb'))
 
 
 if __name__ == '__main__':
